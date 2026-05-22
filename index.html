@@ -1,0 +1,2078 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Showreel Studio</title>
+<meta name="description" content="Create showreel videos of your design work with preset animation templates. No login, runs in your browser." />
+<meta name="theme-color" content="#0f0f10" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<!-- Open Graph / share preview -->
+<meta property="og:title" content="Showreel Studio" />
+<meta property="og:description" content="Create showreel videos of your design work with preset animation templates." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="icon-512.png" />
+<style>
+  :root{
+    --bg:#0f0f10;
+    --panel:#161618;
+    --panel-2:#1c1c1f;
+    --line:#2a2a2e;
+    --line-2:#37373d;
+    --text:#ececee;
+    --muted:#8a8a92;
+    --accent:#ececee;
+    --ok:#22c55e;
+    --err:#ef4444;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  button,input,select{font:inherit;color:inherit}
+  .app{display:grid;grid-template-columns:280px 1fr 280px;grid-template-rows:52px 1fr;height:100vh}
+  header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.2px;font-size:13px}
+  header .brand .logo{width:14px;height:14px;border-radius:3px;background:var(--text)}
+  header .actions{display:flex;gap:6px}
+  .btn{background:transparent;border:1px solid var(--line);color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.12s;font-size:12px}
+  .btn:hover{border-color:var(--line-2);background:var(--panel-2)}
+  .btn.primary{background:var(--text);color:#0f0f10;border-color:var(--text)}
+  .btn.primary:hover{background:#fff}
+  .btn.ghost{border-color:transparent}
+  .btn.ghost:hover{border-color:var(--line)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .panel{background:var(--panel);overflow:auto}
+  .panel.left{border-right:1px solid var(--line);padding:14px}
+  .panel.right{border-left:1px solid var(--line);padding:14px}
+  .panel::-webkit-scrollbar{width:8px;height:8px}
+  .panel::-webkit-scrollbar-thumb{background:#2a2a2e;border-radius:4px}
+  .stage{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:12px;background:#0a0a0b}
+  .canvasWrap{position:relative;border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+  canvas{display:block;background:#000}
+  .playbar{display:flex;align-items:center;gap:10px;width:min(820px,90%);background:var(--panel);padding:8px 12px;border-radius:8px;border:1px solid var(--line)}
+  .playbar input[type=range]{flex:1;accent-color:var(--text);height:4px}
+  .time{font-variant-numeric:tabular-nums;color:var(--muted);min-width:120px;text-align:right;font-size:11px}
+  h3{margin:0 0 10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .group{margin-bottom:20px}
+  .row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+  .row label{flex:1;color:var(--muted);font-size:12px}
+  .row input[type=text],.row input[type=number],.row select{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--text);width:100%;outline:none;font-size:12px
+  }
+  .row input[type=number]{max-width:90px;text-align:right;font-variant-numeric:tabular-nums}
+  .row input:focus{border-color:var(--line-2)}
+  .row input[type=checkbox]{accent-color:var(--text)}
+  .modeTabs{margin-bottom:4px}
+  .modeTabs button{padding:7px 8px;font-size:11px;font-weight:600}
+  .presets{display:grid;grid-template-columns:1fr;gap:6px}
+  .preset{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;transition:.12s;overflow:hidden;display:flex;gap:10px;align-items:center}
+  .preset:hover{border-color:var(--line-2)}
+  .preset.sel{border-color:var(--text)}
+  .preset .mini{flex-shrink:0;width:54px;height:36px;border-radius:5px;background:#0a0a0b;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .preset .info{flex:1;min-width:0}
+  .preset .info .name{font-size:12px;font-weight:600}
+  .preset .info .desc{font-size:11px;color:var(--muted);margin-top:1px;line-height:1.3}
+  .templates{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .tpl{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;transition:.12s;overflow:hidden}
+  .tpl:hover{border-color:var(--line-2)}
+  .tpl.sel{border-color:var(--text)}
+  .tpl .name{font-size:11px;font-weight:600}
+  .tpl .desc{font-size:10px;color:var(--muted);margin-top:1px;line-height:1.3}
+  .tpl .mini{height:36px;margin-top:6px;border-radius:4px;background:#0a0a0b;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .mini i{position:absolute;background:#3a3a40;border-radius:2px}
+  .effects{display:flex;flex-wrap:wrap;gap:4px}
+  .fx{padding:5px 9px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;cursor:pointer;font-size:11px;color:var(--muted);transition:.12s}
+  .fx:hover{border-color:var(--line-2);color:var(--text)}
+  .fx.sel{background:var(--text);color:#0f0f10;border-color:var(--text)}
+  .drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel-2);transition:.12s;font-size:12px}
+  .drop:hover{border-color:var(--line-2);color:var(--text)}
+  .drop.drag{border-color:var(--text);color:var(--text);background:#1f1f23}
+  .clips{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+  .clip{display:flex;gap:8px;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px;cursor:grab}
+  .clip:active{cursor:grabbing}
+  .clip.drag{opacity:.4}
+  .clip .thumb{width:50px;height:32px;border-radius:4px;object-fit:cover;background:#000}
+  .clip .meta{flex:1;min-width:0}
+  .clip .meta .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .clip .meta .sm{font-size:10px;color:var(--muted)}
+  .clip .x{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px}
+  .clip .x:hover{color:var(--err)}
+  .hint{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.4}
+  .toggle{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:2px;gap:2px}
+  .toggle button{flex:1;background:transparent;border:0;color:var(--muted);padding:5px 6px;border-radius:4px;cursor:pointer;font-size:11px}
+  .toggle button.sel{background:var(--line-2);color:var(--text)}
+  .status{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--panel);border:1px solid var(--line);padding:10px 14px;border-radius:8px;display:none;align-items:center;gap:10px;font-size:12px}
+  .status.show{display:flex}
+  .spinner{width:12px;height:12px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--text);animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .kbd{font-family:ui-monospace,monospace;background:var(--panel-2);border:1px solid var(--line);border-radius:3px;padding:1px 4px;font-size:10px;color:var(--muted)}
+  details{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin-top:6px}
+  details summary{cursor:pointer;color:var(--muted);font-size:11px;outline:none}
+  .unit{color:var(--muted);font-size:11px;margin-left:4px}
+  .field{display:flex;align-items:center;gap:4px}
+  @media (max-width: 1100px){.app{grid-template-columns:240px 1fr 260px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="logo"></span> Showreel Studio</div>
+    <div class="actions">
+      <button class="btn ghost" id="btnReset">Reset</button>
+      <button class="btn" id="btnPlay">Play</button>
+      <button class="btn primary" id="btnExport">Export</button>
+    </div>
+  </header>
+
+  <aside class="panel left">
+    <div class="group">
+      <h3>Designs</h3>
+      <label class="drop" id="drop">
+        Drop images / videos here<br><span class="hint">jpg · png · gif · webp · mp4 · webm</span>
+        <input id="file" type="file" accept="image/*,video/*" multiple hidden />
+      </label>
+      <div class="clips" id="clips"></div>
+      <div class="hint">Drag to reorder · <span class="kbd">Space</span> play · <span class="kbd">R</span> restart</div>
+    </div>
+  </aside>
+
+  <section class="stage">
+    <div class="canvasWrap"><canvas id="cv" width="1280" height="720"></canvas></div>
+    <div class="playbar">
+      <button class="btn" id="btnPlay2">▶</button>
+      <input id="seek" type="range" min="0" max="1000" value="0" step="1" />
+      <div class="time" id="time">0 / 0 ms</div>
+    </div>
+  </section>
+
+  <aside class="panel right">
+    <div class="group">
+      <div class="toggle modeTabs" id="modeTabs">
+        <button data-v="preset" class="sel">Templates</button>
+        <button data-v="custom">Custom</button>
+      </div>
+    </div>
+
+    <div id="presetPanel">
+      <div class="group">
+        <h3>Animation Preset</h3>
+        <div class="presets" id="presets"></div>
+      </div>
+      <div class="group">
+        <h3>Timing</h3>
+        <div class="row">
+          <label>Cycle duration</label>
+          <div class="field">
+            <input id="presetDur" type="number" min="500" max="30000" step="100" value="2800" />
+            <span class="unit">ms</span>
+          </div>
+        </div>
+        <div class="row">
+          <label>Speed</label>
+          <div class="toggle" id="speed">
+            <button data-v="0.5">0.5×</button>
+            <button data-v="0.75">0.75×</button>
+            <button data-v="1" class="sel">1×</button>
+            <button data-v="1.5">1.5×</button>
+            <button data-v="2">2×</button>
+          </div>
+        </div>
+        <div class="hint">Set the duration of one full cycle, or use Speed to scale all presets.</div>
+      </div>
+    </div>
+
+    <div id="customPanel" hidden>
+      <div class="group">
+        <h3>Layout</h3>
+        <div class="templates" id="templates"></div>
+      </div>
+
+      <div class="group">
+        <h3>Effect</h3>
+        <div class="effects" id="effects"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Format</h3>
+      <div class="row">
+        <label>Aspect</label>
+        <div class="toggle" id="aspect">
+          <button data-v="16:9" class="sel">16:9</button>
+          <button data-v="1:1">1:1</button>
+          <button data-v="9:16">9:16</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Background</label>
+        <div class="toggle" id="bgmode">
+          <button data-v="dark" class="sel">Dark</button>
+          <button data-v="light">Light</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Quality</label>
+        <div class="toggle" id="quality">
+          <button data-v="hd">HD</button>
+          <button data-v="fhd" class="sel">1080p</button>
+          <button data-v="qhd">1440p</button>
+          <button data-v="uhd">4K</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Image fit</label>
+        <div class="toggle" id="fit">
+          <button data-v="cover" class="sel">Cover</button>
+          <button data-v="contain">Contain</button>
+          <button data-v="fill">Fill</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Padding</label>
+        <div class="field">
+          <input id="padding" type="number" min="0" max="20" step="1" value="6" />
+          <span class="unit">%</span>
+        </div>
+      </div>
+      <div class="row">
+        <label>Tile gap</label>
+        <div class="field">
+          <input id="gap" type="number" min="0" max="6" step="0.5" value="1.5" />
+          <span class="unit">%</span>
+        </div>
+      </div>
+      <div class="row">
+        <label>Clip duration</label>
+        <div class="field">
+          <input id="dur" type="number" min="100" max="20000" step="50" value="2000" />
+          <span class="unit">ms</span>
+        </div>
+      </div>
+      <div class="row">
+        <label>Transition</label>
+        <div class="field">
+          <input id="trans" type="number" min="0" max="5000" step="50" value="400" />
+          <span class="unit">ms</span>
+        </div>
+      </div>
+      <div class="row">
+        <label>Loop preview</label>
+        <input id="loop" type="checkbox" checked />
+      </div>
+      <details>
+        <summary>Export options</summary>
+        <div class="row" style="margin-top:6px"><label>FPS</label><input id="fps" type="number" min="24" max="60" step="1" value="60" /></div>
+        <div class="row"><label>Bitrate</label><div class="field"><input id="br" type="number" min="2" max="80" step="1" value="20" /><span class="unit">Mbps</span></div></div>
+        <div class="hint">Exports at the canvas resolution above. Bitrate auto-scales with quality — 4K wants 40–60 Mbps for clean detail.</div>
+      </details>
+    </div>
+  </aside>
+</div>
+
+<div class="status" id="status"><div class="spinner"></div><span id="statusText">Working…</span></div>
+
+<script>
+/* ----------------------------- state ----------------------------- */
+const state = {
+  clips: [],
+  mode: 'preset',
+  presetId: 'heroReveal',
+  presetCycleMs: 2800,
+  speed: 1,
+  templateId: 'single',
+  effectId: 'fade',
+  aspect: '16:9',
+  bgMode: 'dark',
+  quality: 'fhd',
+  fit: 'cover',
+  paddingPct: 6,
+  gapPct: 1.5,
+  perDurMs: 2000,
+  transMs: 400,
+  loop: true,
+  fps: 60,
+  br: 20,
+  playing: false,
+  t0: 0,
+  pausedMs: 0,
+  totalMs: 0,
+};
+
+/* ----------------------------- helpers ----------------------------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const easeOutCubic = t => 1 - Math.pow(1-t,3);
+const easeInOutCubic = t => t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+const easeOutBack = t => { const c1=1.70158, c3=c1+1; return 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2); };
+const easeOutQuint = t => 1 - Math.pow(1-t, 5);
+const easeInOutQuint = t => t<.5 ? 16*t*t*t*t*t : 1 - Math.pow(-2*t+2, 5)/2;
+const easeOutExpo = t => t === 1 ? 1 : 1 - Math.pow(2, -10*t);
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* Snap-and-hold progress for continuous layouts.
+   Each clip gets `perDurMs` of screen time:
+     - holds in focus for (perDurMs - transMs) ms
+     - then eases over `transMs` ms to the next clip's focus position
+   Returns a float where integer = clip index in focus, fractional = travelling. */
+function snapProgress(tMs){
+  const slotMs = state.perDurMs;
+  const moveMs = clamp(state.transMs, 0, slotMs * 0.9);
+  const holdMs = slotMs - moveMs;
+  const slotIdx = Math.floor(tMs/slotMs);
+  const inSlot = tMs - slotIdx*slotMs;
+  let frac;
+  if(inSlot < holdMs || moveMs <= 0) frac = 0;
+  else frac = easeInOutCubic(clamp((inSlot - holdMs)/moveMs, 0, 1));
+  return slotIdx + frac;
+}
+const uuid = ()=>Math.random().toString(36).slice(2,9);
+const fmtMs = ms => `${Math.round(ms)} ms`;
+
+function setStatus(msg, show=true){
+  const el = $('#status'); $('#statusText').textContent = msg||'';
+  el.classList.toggle('show', !!show);
+}
+function bgColor(){ return state.bgMode==='dark' ? '#0a0a0b' : '#f5f5f3'; }
+function fgColor(){ return state.bgMode==='dark' ? '#ececee' : '#0f0f10'; }
+
+/* ----------------------------- canvas ----------------------------- */
+const cv = $('#cv');
+const ctx = cv.getContext('2d');
+
+function applyAspect(){
+  // Resolution presets — buffer matches export resolution.
+  const sizes = {
+    hd:  {'16:9':[1280,720],  '1:1':[1080,1080],'9:16':[720,1280] },
+    fhd: {'16:9':[1920,1080], '1:1':[1440,1440],'9:16':[1080,1920]},
+    qhd: {'16:9':[2560,1440], '1:1':[1920,1920],'9:16':[1440,2560]},
+    uhd: {'16:9':[3840,2160], '1:1':[2880,2880],'9:16':[2160,3840]},
+  };
+  const [w,h] = sizes[state.quality][state.aspect];
+  cv.width = w; cv.height = h;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  // Display constrained to viewport but buffer is full-res.
+  const maxW = Math.min(window.innerWidth - 640, 1100);
+  const maxH = window.innerHeight - 220;
+  const r = Math.min(maxW/w, maxH/h, 1);
+  cv.style.width = (w*r)+'px';
+  cv.style.height = (h*r)+'px';
+  // Rebuild scaled-image cache for new target resolution.
+  rebuildScaledCache();
+}
+
+/* Multi-step downscale cache.
+   Browsers downscale in a single drawImage pass which can soften details on
+   big source images. We pre-bake a pyramid (halving each step) so drawClip
+   can start from a source that is at most 2× the target — preserves detail. */
+const scaledCache = new WeakMap(); // clip.el -> [{w,h,canvas}]
+function buildPyramid(srcEl, srcW, srcH){
+  const levels = [];
+  // Largest level == original (we keep a reference, not a copy)
+  levels.push({w:srcW, h:srcH, el:srcEl});
+  let cw = srcW, ch = srcH;
+  // Halve until small enough; cap to 10 levels to bound memory.
+  for(let i=0;i<10 && Math.max(cw,ch) > 64; i++){
+    const nw = Math.max(1, Math.round(cw/2));
+    const nh = Math.max(1, Math.round(ch/2));
+    const c = document.createElement('canvas');
+    c.width = nw; c.height = nh;
+    const cx = c.getContext('2d');
+    cx.imageSmoothingEnabled = true;
+    cx.imageSmoothingQuality = 'high';
+    // Step down from the previous level for cleanest result.
+    cx.drawImage(levels[levels.length-1].el, 0, 0, nw, nh);
+    levels.push({w:nw, h:nh, el:c});
+    cw = nw; ch = nh;
+  }
+  return levels;
+}
+function rebuildScaledCache(){
+  for(const clip of state.clips){
+    if(clip.type === 'image' && !scaledCache.has(clip.el)){
+      scaledCache.set(clip.el, buildPyramid(clip.el, clip.w, clip.h));
+    }
+  }
+}
+function pickSource(clip, targetW, targetH){
+  if(clip.type !== 'image') return clip.el;
+  const pyr = scaledCache.get(clip.el);
+  if(!pyr) return clip.el;
+  // Pick smallest level still ≥ target on both axes (keeps source ≥ target,
+  // ≤ 2× target — single drawImage call now does a clean shrink).
+  let best = pyr[0];
+  for(const lv of pyr){
+    if(lv.w >= targetW && lv.h >= targetH) best = lv;
+    else break;
+  }
+  return best.el;
+}
+window.addEventListener('resize', applyAspect);
+
+/* ----------------------------- layouts ----------------------------- */
+/* Layouts define tiles in normalized [0..1] coordinates relative to the
+   padded inner area. `project` converts those into canvas-space rects,
+   respecting state.paddingPct (outer margin) and state.gapPct (between tiles). */
+function project(W, H, normRects){
+  const p = state.paddingPct / 100;
+  const x0 = W*p, y0 = H*p;
+  const sx = W*(1-2*p), sy = H*(1-2*p);
+  return normRects.map(([nx,ny,nw,nh]) => [
+    x0 + nx*sx,
+    y0 + ny*sy,
+    nw*sx,
+    nh*sy
+  ]);
+}
+// Returns normalized gap as fraction of inner area (so it stays a consistent
+// visual size relative to the padded box).
+function gapN(W, H){
+  return state.gapPct / 100;
+}
+// Inset for continuous layouts (no outer padding subtraction needed — they
+// position tiles in canvas space directly).
+function inset(W, H){
+  const p = state.paddingPct / 100;
+  return { x: W*p, y: H*p, w: W*(1-2*p), h: H*(1-2*p) };
+}
+
+const layouts = {
+  single: {
+    name:'Single', desc:'One design, full bleed at 0% padding.',
+    mini:'<i style="left:6%;top:6%;width:88%;height:88%"></i>',
+    chunk:1,
+    frames(W,H){ return project(W,H,[[0,0,1,1]]); }
+  },
+  centered: {
+    name:'Centered', desc:'Smaller hero, extra breathing room.',
+    mini:'<i style="left:22%;top:22%;width:56%;height:56%"></i>',
+    chunk:1,
+    frames(W,H){ return project(W,H,[[0.10,0.10,0.80,0.80]]); }
+  },
+  split: {
+    name:'Split', desc:'Two designs side by side.',
+    mini:'<i style="left:4%;top:8%;width:44%;height:84%"></i><i style="left:52%;top:8%;width:44%;height:84%"></i>',
+    chunk:2,
+    frames(W,H){ const g=gapN(); const c=(1-g)/2;
+      return project(W,H,[[0,0,c,1],[c+g,0,c,1]]);
+    }
+  },
+  triptych: {
+    name:'Triptych', desc:'Three columns.',
+    mini:'<i style="left:2%;top:14%;width:30%;height:72%"></i><i style="left:35%;top:14%;width:30%;height:72%"></i><i style="left:68%;top:14%;width:30%;height:72%"></i>',
+    chunk:3,
+    frames(W,H){ const g=gapN(); const c=(1-2*g)/3;
+      return project(W,H,[[0,0,c,1],[c+g,0,c,1],[2*(c+g),0,c,1]]);
+    }
+  },
+  wideStrip: {
+    name:'Wide Strip', desc:'Letterbox band across the canvas.',
+    mini:'<i style="left:2%;top:30%;width:96%;height:40%"></i>',
+    chunk:1,
+    frames(W,H){ return project(W,H,[[0,0.15,1,0.70]]); }
+  },
+  quad: {
+    name:'Quad', desc:'Even 2×2 grid.',
+    mini:'<i style="left:4%;top:6%;width:44%;height:42%"></i><i style="left:52%;top:6%;width:44%;height:42%"></i><i style="left:4%;top:52%;width:44%;height:42%"></i><i style="left:52%;top:52%;width:44%;height:42%"></i>',
+    chunk:4,
+    frames(W,H){ const g=gapN(); const c=(1-g)/2;
+      return project(W,H,[
+        [0,0,c,c],[c+g,0,c,c],
+        [0,c+g,c,c],[c+g,c+g,c,c],
+      ]);
+    }
+  },
+  grid6: {
+    name:'Grid 6', desc:'Six tiles in 3×2.',
+    mini:'<i style="left:4%;top:10%;width:28%;height:36%"></i><i style="left:36%;top:10%;width:28%;height:36%"></i><i style="left:68%;top:10%;width:28%;height:36%"></i><i style="left:4%;top:54%;width:28%;height:36%"></i><i style="left:36%;top:54%;width:28%;height:36%"></i><i style="left:68%;top:54%;width:28%;height:36%"></i>',
+    chunk:6,
+    frames(W,H){ const g=gapN(); const cw=(1-2*g)/3, ch=(1-g)/2; const F=[];
+      for(let r=0;r<2;r++) for(let c=0;c<3;c++) F.push([c*(cw+g), r*(ch+g), cw, ch]);
+      return project(W,H,F);
+    }
+  },
+  mosaic5: {
+    name:'Mosaic', desc:'Five tiles, asymmetric.',
+    mini:'<i style="left:2%;top:4%;width:58%;height:58%"></i><i style="left:62%;top:4%;width:36%;height:28%"></i><i style="left:62%;top:34%;width:36%;height:28%"></i><i style="left:2%;top:64%;width:46%;height:30%"></i><i style="left:50%;top:64%;width:48%;height:30%"></i>',
+    chunk:5,
+    frames(W,H){ const g=gapN();
+      const big = 0.60, top = 0.60;
+      const rightW = 1 - big - g;
+      const cellH = (top - g)/2;
+      const botH = 1 - top - g;
+      const botW = (1 - g)/2;
+      return project(W,H,[
+        [0,        0,         big,    top],
+        [big+g,    0,         rightW, cellH],
+        [big+g,    cellH+g,   rightW, cellH],
+        [0,        top+g,     botW,   botH],
+        [botW+g,   top+g,     botW,   botH],
+      ]);
+    }
+  },
+  magazine: {
+    name:'Magazine', desc:'Hero + two stacked.',
+    mini:'<i style="left:2%;top:4%;width:62%;height:92%"></i><i style="left:66%;top:4%;width:32%;height:44%"></i><i style="left:66%;top:52%;width:32%;height:44%"></i>',
+    chunk:3,
+    frames(W,H){ const g=gapN(); const big=0.62; const rightW=1-big-g; const cellH=(1-g)/2;
+      return project(W,H,[
+        [0,       0,       big,    1],
+        [big+g,   0,       rightW, cellH],
+        [big+g,   cellH+g, rightW, cellH],
+      ]);
+    }
+  },
+  phoneFrame: {
+    name:'Phone', desc:'Tall 9:19.5 mock, centered.',
+    mini:'<i style="left:38%;top:4%;width:24%;height:92%"></i>',
+    chunk:1,
+    frames(W,H){
+      // Compute phone rect inside the padded inner box.
+      const i = inset(W,H);
+      const targetAR = 9/19.5;
+      let h = i.h, w = h*targetAR;
+      if(w > i.w){ w = i.w; h = w/targetAR; }
+      const x = i.x + (i.w - w)/2;
+      const y = i.y + (i.h - h)/2;
+      return [[x,y,w,h]];
+    },
+    pre(ctx, W, H){
+      const g = ctx.createLinearGradient(0,0,W,0);
+      g.addColorStop(0,'rgba(120,120,140,0.05)');
+      g.addColorStop(0.5,'rgba(0,0,0,0)');
+      g.addColorStop(1,'rgba(120,120,140,0.05)');
+      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    }
+  },
+  stack3: {
+    name:'Stack', desc:'Three fanned cards, centered.',
+    mini:'<i style="left:14%;top:18%;width:56%;height:64%;transform:rotate(-6deg);transform-origin:50% 50%"></i><i style="left:22%;top:14%;width:56%;height:68%;opacity:.85"></i><i style="left:30%;top:18%;width:56%;height:64%;opacity:.7"></i>',
+    chunk:3,
+    frames(W,H){
+      const i = inset(W,H);
+      const cw = i.w*0.50, ch = i.h*0.80;
+      const cx = i.x + i.w/2, cy = i.y + i.h/2;
+      return [
+        [cx-cw/2 + i.w*0.10, cy-ch/2 + i.h*0.04, cw, ch],
+        [cx-cw/2 - i.w*0.10, cy-ch/2 + i.h*0.04, cw, ch],
+        [cx-cw/2,            cy-ch/2,            cw, ch],
+      ];
+    },
+    rotations:[ 0.10, -0.10, 0 ]
+  },
+  diagonal2: {
+    name:'Diagonal', desc:'Two halves split on the bias.',
+    mini:'<i style="left:0;top:0;width:60%;height:100%;clip-path:polygon(0 0,100% 0,70% 100%,0 100%)"></i><i style="left:40%;top:0;width:60%;height:100%;clip-path:polygon(30% 0,100% 0,100% 100%,0 100%);opacity:.7"></i>',
+    chunk:2,
+    frames(W,H){
+      const i = inset(W,H);
+      return [[i.x,i.y,i.w,i.h],[i.x,i.y,i.w,i.h]];
+    },
+    clips:[
+      (W,H)=>{ const i=inset(W,H); return [[i.x,i.y],[i.x+i.w*0.6,i.y],[i.x+i.w*0.4,i.y+i.h],[i.x,i.y+i.h]]; },
+      (W,H)=>{ const i=inset(W,H); return [[i.x+i.w*0.6,i.y],[i.x+i.w,i.y],[i.x+i.w,i.y+i.h],[i.x+i.w*0.4,i.y+i.h]]; },
+    ]
+  },
+  filmstrip: {
+    name:'Filmstrip', desc:'Holds each clip, slides to next.',
+    mini:'<i style="left:-6%;top:30%;width:28%;height:44%"></i><i style="left:24%;top:30%;width:28%;height:44%"></i><i style="left:54%;top:30%;width:28%;height:44%"></i><i style="left:84%;top:30%;width:28%;height:44%"></i>',
+    chunk:1, continuous:true,
+    draw(ctx, W, H, clips, tMs){
+      if(!clips.length) return;
+      const n = clips.length;
+      const box = inset(W,H);
+      const tileH = box.h;
+      const gap = W*0.04;
+      const widths = clips.map(c => tileH * (c.w/c.h));
+      const centers = [];
+      let cur = 0;
+      for(let k=0;k<n;k++){ centers.push(cur + widths[k]/2); cur += widths[k] + gap; }
+      const prog = snapProgress(tMs) % n;
+      const i0 = Math.floor(prog), i1 = (i0+1) % n, frac = prog - i0;
+      const focusX = centers[i0] + frac * ((centers[i1] + (i1<=i0 ? cur : 0)) - centers[i0]);
+      const offset = focusX - W/2;
+      const y = box.y;
+      for(let pass=-1; pass<=1; pass++){
+        let cx = -offset + pass*cur;
+        for(let k=0;k<n;k++){
+          if(cx + widths[k] > -10 && cx < W+10){
+            drawClip(ctx, clips[k], [cx, y, widths[k], tileH], 1, 1, 0, 0);
+          }
+          cx += widths[k] + gap;
+        }
+      }
+    }
+  },
+  verticalReel: {
+    name:'Vertical reel', desc:'Holds, then scrolls vertically.',
+    mini:'<i style="left:24%;top:-6%;width:52%;height:30%"></i><i style="left:24%;top:28%;width:52%;height:30%"></i><i style="left:24%;top:62%;width:52%;height:30%"></i>',
+    chunk:1, continuous:true,
+    draw(ctx, W, H, clips, tMs){
+      if(!clips.length) return;
+      const n = clips.length;
+      const box = inset(W,H);
+      const tileW = box.w;
+      const gap = H*0.06;
+      const heights = clips.map(c => tileW * (c.h/c.w));
+      const centers = [];
+      let cur = 0;
+      for(let k=0;k<n;k++){ centers.push(cur + heights[k]/2); cur += heights[k] + gap; }
+      const prog = snapProgress(tMs) % n;
+      const i0 = Math.floor(prog), i1 = (i0+1) % n, frac = prog - i0;
+      const focusY = centers[i0] + frac * ((centers[i1] + (i1<=i0 ? cur : 0)) - centers[i0]);
+      const offset = focusY - H/2;
+      const x = box.x;
+      for(let pass=-1; pass<=1; pass++){
+        let cy = -offset + pass*cur;
+        for(let k=0;k<n;k++){
+          if(cy + heights[k] > -10 && cy < H+10){
+            drawClip(ctx, clips[k], [x, cy, tileW, heights[k]], 1, 1, 0, 0);
+          }
+          cy += heights[k] + gap;
+        }
+      }
+    }
+  },
+  carouselFocus: {
+    name:'Carousel', desc:'Snaps to focus, then drifts to next.',
+    chunk:1, continuous:true,
+    mini:'<i style="left:-4%;top:26%;width:24%;height:48%;opacity:.55"></i><i style="left:22%;top:18%;width:34%;height:64%"></i><i style="left:58%;top:26%;width:24%;height:48%;opacity:.55"></i><i style="left:82%;top:30%;width:18%;height:40%;opacity:.35"></i>',
+    draw(ctx, W, H, clips, tMs){
+      if(!clips.length) return;
+      const n = clips.length;
+      const box = inset(W,H);
+      const prog = snapProgress(tMs);
+      const tileH = box.h;
+      const tileW = box.w*0.45;
+      const gap = box.w*0.05;
+      const step = tileW + gap;
+      const centerX = box.x + box.w/2;
+      const centerY = box.y + box.h/2;
+      for(let off=-2; off<=2; off++){
+        const idxF = prog + off;
+        const idx = ((Math.floor(idxF) % n) + n) % n;
+        const frac = idxF - Math.floor(idxF);
+        const slotPos = off - frac;
+        const d = Math.abs(slotPos);
+        const sc = 1 - clamp(d*0.18, 0, 0.5);
+        const a = 1 - clamp(d*0.32, 0, 0.85);
+        const sh = tileH*sc, sw = tileW*sc;
+        const fx = centerX - sw/2 + slotPos*step;
+        const fy = centerY - sh/2;
+        ctx.save();
+        ctx.globalAlpha = a;
+        drawClip(ctx, clips[idx], [fx, fy, sw, sh], 1, 1, 0, 0);
+        ctx.restore();
+      }
+    }
+  },
+  parallaxStack: {
+    name:'Parallax', desc:'Holds, then slides next layer in.',
+    chunk:1, continuous:true,
+    mini:'<i style="left:6%;top:14%;width:60%;height:50%;opacity:.5"></i><i style="left:28%;top:30%;width:60%;height:50%"></i>',
+    draw(ctx, W, H, clips, tMs){
+      if(!clips.length) return;
+      const n = clips.length;
+      const box = inset(W,H);
+      const prog = snapProgress(tMs);
+      const cw = box.w, ch = box.h;
+      for(let off=-1; off<=1; off++){
+        const idxF = prog + off;
+        const idx = ((Math.floor(idxF) % n) + n) % n;
+        const frac = idxF - Math.floor(idxF);
+        const slotPos = off - frac;
+        const x = box.x + slotPos*W*0.55;
+        const y = box.y + Math.sin(slotPos*1.6)*H*0.04;
+        const d = Math.abs(slotPos);
+        const a = 1 - clamp(d*0.7, 0, 0.9);
+        const sc = 1 - clamp(d*0.2, 0, 0.4);
+        const sw = cw*sc, sh = ch*sc;
+        const fx = x + (cw-sw)/2;
+        const fy = y + (ch-sh)/2;
+        ctx.save();
+        ctx.globalAlpha = a;
+        drawClip(ctx, clips[idx], [fx, fy, sw, sh], 1, 1, 0, 0);
+        ctx.restore();
+      }
+    }
+  },
+};
+
+/* ----------------------------- effects ----------------------------- */
+/*
+  Each effect = how a clip enters/holds/exits within its slot.
+  fn(ctx, clip, frame, localT, holdT) where:
+    frame = [x,y,w,h]
+    localT 0..1 includes the transition + hold + transition normalized
+*/
+const effects = {
+  none: { name:'None', fn(ctx,clip,frame,t,phase){ drawClip(ctx,clip,frame,1,1,0,0); } },
+  fade: { name:'Fade', fn(ctx,clip,frame,t,phase){
+    const a = phase==='in' ? t : phase==='out' ? 1-t : 1;
+    drawClip(ctx,clip,frame,1,a,0,0);
+  }},
+  zoomIn: { name:'Zoom in', fn(ctx,clip,frame,t,phase){
+    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,0.9+0.1*e, e, 0,0); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1+0.04*(1-e), e, 0,0); }
+    else { const e=easeOutCubic(clamp(t,0,1)); drawClip(ctx,clip,frame,1.0+0.03*e, 1, 0,0); }
+  }},
+  zoomOut: { name:'Zoom out', fn(ctx,clip,frame,t,phase){
+    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1.15-0.15*e, e, 0,0); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1+0.04*(1-e), e, 0,0); }
+    else drawClip(ctx,clip,frame,1.0, 1, 0,0);
+  }},
+  slideUp: { name:'Slide up', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, 0, (1-e)*h*0.25); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, 0, -(1-e)*h*0.25); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  slideLeft: { name:'Slide left', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, (1-e)*w*0.3, 0); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, -(1-e)*w*0.3, 0); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  blurIn: { name:'Blur in', fn(ctx,clip,frame,t,phase){
+    if(phase==='in'){ const e=easeOutCubic(t); ctx.save(); ctx.filter=`blur(${(1-e)*16}px)`; drawClip(ctx,clip,frame,1.02, e, 0,0); ctx.restore(); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); ctx.save(); ctx.filter=`blur(${(1-e)*10}px)`; drawClip(ctx,clip,frame,1, e, 0,0); ctx.restore(); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  kenBurns: { name:'Ken Burns', fn(ctx,clip,frame,t,phase,absT,dur){
+    const overall = phase==='in' ? t*0.15 : phase==='hold' ? 0.15 + 0.7*t : 0.85 + 0.15*t;
+    const z = 1.0 + 0.18*overall;
+    const a = phase==='in' ? t : phase==='out' ? 1-t : 1;
+    drawClip(ctx,clip,frame,z,a, -8*overall, -4*overall);
+  }},
+  pop: { name:'Pop', fn(ctx,clip,frame,t,phase){
+    if(phase==='in'){ const e=easeOutBack(t); drawClip(ctx,clip,frame,e, clamp(t*2,0,1), 0,0); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,0.94+0.06*e, e, 0,0); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  swing: { name:'Swing', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    const cx=x+w/2, cy=y+h/2;
+    let rot=0,a=1;
+    if(phase==='in'){ const e=easeOutCubic(t); rot=(1-e)*-0.18; a=t; }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); rot=(1-e)*0.12; a=t; }
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot); ctx.translate(-cx,-cy);
+    drawClip(ctx,clip,frame,1,a,0,0);
+    ctx.restore();
+  }},
+  glitch: { name:'Glitch', fn(ctx,clip,frame,t,phase){
+    const a = phase==='in' ? t : phase==='out' ? 1-t : 1;
+    if(phase!=='hold'){
+      const [x,y,w,h]=frame;
+      const jitter = (1 - (phase==='in'?t:1-t)) * 14;
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      ctx.globalAlpha = a*0.55;
+      drawClip(ctx,clip,[x+jitter,y,w,h],1,1,0,0,{tint:'#ff4d6a'});
+      drawClip(ctx,clip,[x-jitter,y,w,h],1,1,0,0,{tint:'#4dd9ff'});
+      ctx.restore();
+    }
+    drawClip(ctx,clip,frame,1,a,0,0);
+  }},
+  wipeRight: { name:'Wipe →', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    ctx.save();
+    let cut = w;
+    if(phase==='in') cut = w*easeOutCubic(t);
+    if(phase==='out') cut = w*easeOutCubic(1-t);
+    ctx.beginPath(); ctx.rect(x,y,cut,h); ctx.clip();
+    drawClip(ctx,clip,frame,1,1,0,0);
+    ctx.restore();
+  }},
+  slideDown: { name:'Slide down', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, 0, -(1-e)*h*0.25); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, 0, (1-e)*h*0.25); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  slideRight: { name:'Slide right', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, -(1-e)*w*0.3, 0); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, (1-e)*w*0.3, 0); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  iris: { name:'Iris', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    const cx=x+w/2, cy=y+h/2;
+    const maxR = Math.hypot(w,h)/2;
+    let r = maxR;
+    if(phase==='in') r = maxR*easeOutCubic(t);
+    if(phase==='out') r = maxR*easeOutCubic(1-t);
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();
+    drawClip(ctx,clip,frame,1,1,0,0);
+    ctx.restore();
+  }},
+  reveal: { name:'Reveal', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    let k = 1;
+    if(phase==='in') k = easeOutCubic(t);
+    if(phase==='out') k = easeOutCubic(1-t);
+    const rw = w*k, rh = h*k;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x+(w-rw)/2, y+(h-rh)/2, rw, rh); ctx.clip();
+    drawClip(ctx,clip,frame,1,1,0,0);
+    ctx.restore();
+  }},
+  flip3D: { name:'Flip 3D', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    const cx=x+w/2, cy=y+h/2;
+    let sx = 1, a = 1;
+    if(phase==='in'){ const e=easeOutCubic(t); sx = Math.sin(e*Math.PI/2); a = e; }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); sx = Math.sin(e*Math.PI/2); a = e; }
+    if(Math.abs(sx) < 0.02) return;
+    ctx.save();
+    ctx.translate(cx,cy); ctx.scale(sx,1); ctx.translate(-cx,-cy);
+    drawClip(ctx,clip,frame,1,a,0,0);
+    ctx.restore();
+  }},
+  flipY: { name:'Flip vert', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    const cx=x+w/2, cy=y+h/2;
+    let sy = 1, a = 1;
+    if(phase==='in'){ const e=easeOutCubic(t); sy = Math.sin(e*Math.PI/2); a = e; }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); sy = Math.sin(e*Math.PI/2); a = e; }
+    if(Math.abs(sy) < 0.02) return;
+    ctx.save();
+    ctx.translate(cx,cy); ctx.scale(1,sy); ctx.translate(-cx,-cy);
+    drawClip(ctx,clip,frame,1,a,0,0);
+    ctx.restore();
+  }},
+  bounce: { name:'Bounce', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    if(phase==='in'){
+      const e = easeOutBack(t);
+      drawClip(ctx,clip,frame,1, clamp(t*1.5,0,1), 0, (1-e)*-h*0.3);
+    } else if(phase==='out'){
+      const e = easeOutCubic(1-t);
+      drawClip(ctx,clip,frame,1, t, 0, (1-e)*h*0.2);
+    } else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  shake: { name:'Shake', fn(ctx,clip,frame,t,phase,absT){
+    const a = phase==='in' ? t : phase==='out' ? 1-t : 1;
+    let dx=0, dy=0;
+    if(phase==='hold'){
+      const decay = Math.max(0, 1 - t*4);
+      const amp = 16 * decay;
+      const f = absT * 0.06;
+      dx = Math.sin(f) * amp;
+      dy = Math.cos(f*1.3) * amp;
+    }
+    drawClip(ctx,clip,frame,1,a,dx,dy);
+  }},
+  splitBars: { name:'Bars', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    const bars = 6;
+    const bh = h/bars;
+    let k = 1;
+    if(phase==='in') k = easeOutCubic(t);
+    if(phase==='out') k = easeOutCubic(1-t);
+    ctx.save();
+    ctx.beginPath();
+    for(let i=0;i<bars;i++){
+      const cw = w * k;
+      const bx = i%2===0 ? x : x + (w - cw);
+      ctx.rect(bx, y + i*bh, cw, bh);
+    }
+    ctx.clip();
+    drawClip(ctx,clip,frame,1,1,0,0);
+    ctx.restore();
+  }},
+  pixels: { name:'Pixel dissolve', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    let progress = 1;
+    if(phase==='in') progress = easeOutCubic(t);
+    if(phase==='out') progress = easeOutCubic(1-t);
+    // Draw to offscreen, then mask in tiles
+    const cols = 24, rows = Math.round(cols * h/w);
+    ctx.save();
+    ctx.beginPath();
+    const tw = w/cols, th = h/rows;
+    // deterministic ordering
+    for(let i=0;i<cols*rows;i++){
+      const seed = ((i*9301+49297) % 233280)/233280;
+      if(seed < progress){
+        const cx = (i%cols)*tw + x;
+        const cy = Math.floor(i/cols)*th + y;
+        ctx.rect(cx, cy, tw+0.5, th+0.5);
+      }
+    }
+    ctx.clip();
+    drawClip(ctx,clip,frame,1,1,0,0);
+    ctx.restore();
+  }},
+  tilt: { name:'Tilt', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    const cx=x+w/2, cy=y+h/2;
+    let rot=0, sk=0, a=1;
+    if(phase==='in'){ const e=easeOutCubic(t); rot=(1-e)*0.08; sk=(1-e)*0.15; a=t; }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); rot=-(1-e)*0.06; sk=-(1-e)*0.12; a=t; }
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(rot); ctx.transform(1, sk*0.2, sk*0.3, 1, 0, 0); ctx.translate(-cx,-cy);
+    drawClip(ctx,clip,frame,1,a,0,0);
+    ctx.restore();
+  }},
+  roll: { name:'Roll in', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    const cx=x+w/2, cy=y+h/2;
+    let rot=0, dx=0, a=1;
+    if(phase==='in'){ const e=easeOutCubic(t); rot=(1-e)*-0.6; dx=(1-e)*-w*0.3; a=t; }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); rot=(1-e)*0.4; dx=(1-e)*w*0.3; a=t; }
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(rot); ctx.translate(-cx,-cy);
+    drawClip(ctx,clip,frame,1,a,dx,0);
+    ctx.restore();
+  }},
+  perspective: { name:'Perspective', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    const cx=x+w/2, cy=y+h/2;
+    let sy=1, rot=0, a=1;
+    if(phase==='in'){ const e=easeOutCubic(t); sy=0.6+0.4*e; rot=(1-e)*0.05; a=t; }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); sy=0.7+0.3*e; rot=-(1-e)*0.05; a=t; }
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(rot); ctx.scale(1,sy); ctx.translate(-cx,-cy);
+    drawClip(ctx,clip,frame,1,a,0,0);
+    ctx.restore();
+  }},
+  zoomBlur: { name:'Zoom blur', fn(ctx,clip,frame,t,phase){
+    if(phase==='in'){ const e=easeOutCubic(t); ctx.save(); ctx.filter=`blur(${(1-e)*22}px)`; drawClip(ctx,clip,frame,1.25-0.25*e, e, 0,0); ctx.restore(); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); ctx.save(); ctx.filter=`blur(${(1-e)*18}px)`; drawClip(ctx,clip,frame,1+0.1*(1-e), e, 0,0); ctx.restore(); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  pulse: { name:'Pulse', fn(ctx,clip,frame,t,phase,absT){
+    const a = phase==='in' ? t : phase==='out' ? 1-t : 1;
+    let z = 1;
+    if(phase==='hold'){
+      const decay = Math.max(0, 1 - t*3);
+      z = 1 + 0.04 * Math.sin(absT*0.02) * decay;
+    } else if(phase==='in'){
+      z = 0.96 + 0.04*easeOutCubic(t);
+    }
+    drawClip(ctx,clip,frame,z,a,0,0);
+  }},
+  diagonal: { name:'Diagonal', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, (1-e)*w*0.25, (1-e)*h*0.25); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, -(1-e)*w*0.25, -(1-e)*h*0.25); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+};
+
+/* ----------------------------- drawing primitives ----------------------------- */
+function roundedClip(ctx,x,y,w,h,r=10){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+  ctx.clip();
+}
+function drawClip(ctx, clip, frame, zoom=1, alpha=1, dx=0, dy=0, opts={}){
+  if(!clip||!clip.el) return;
+  const [x,y,w,h] = frame;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.globalAlpha = clamp(alpha,0,1);
+  roundedClip(ctx,x,y,w,h,Math.min(w,h)*0.02);
+  // background fill behind transparent images
+  ctx.fillStyle = state.bgMode==='dark' ? '#0f0f10' : '#ffffff';
+  ctx.fillRect(x,y,w,h);
+  // fit modes: cover (fill frame, may crop), contain (letterbox), fill (stretch)
+  const ar = clip.w/clip.h, br = w/h;
+  let dw, dh;
+  if(state.fit === 'fill'){
+    dw = w*zoom; dh = h*zoom;
+  } else if(state.fit === 'contain'){
+    if(ar > br){ dw = w*zoom; dh = dw/ar; }
+    else       { dh = h*zoom; dw = dh*ar; }
+  } else { // cover
+    if(ar > br){ dh = h*zoom; dw = dh*ar; }
+    else       { dw = w*zoom; dh = dw/ar; }
+  }
+  const ix = x + (w-dw)/2 + dx;
+  const iy = y + (h-dh)/2 + dy;
+  // Pick the smallest pyramid level ≥ target so we never downscale > 2× in one pass.
+  const src = pickSource(clip, Math.ceil(dw), Math.ceil(dh));
+  try{ ctx.drawImage(src, ix, iy, dw, dh); }catch(e){}
+  if(opts.tint){
+    ctx.globalCompositeOperation='source-atop';
+    ctx.fillStyle = opts.tint;
+    ctx.globalAlpha = 0.4;
+    ctx.fillRect(x,y,w,h);
+  }
+  ctx.restore();
+}
+
+/* Empty-state slots — dashed placeholders so users can see where their
+   designs will land in the current preset / layout. */
+function drawEmptySlots(ctx, W, H){
+  const box = inset(W,H);
+  let frames = [];
+  if(state.mode === 'preset'){
+    const preset = presets[state.presetId];
+    // Approximate slot positions per preset for the placeholder.
+    if(preset.slots === 1){
+      frames = [[box.x, box.y, box.w, box.h]];
+    } else if(preset.slots === 2){
+      const g = state.gapPct/100; const cw = (1-g)/2;
+      frames = [[box.x, box.y, box.w*cw, box.h], [box.x+box.w*(cw+g), box.y, box.w*cw, box.h]];
+    } else if(preset.slots === 3){
+      frames = [
+        [box.x,                 box.y + box.h*0.20, box.w*0.25, box.h*0.60],
+        [box.x + box.w*0.30,    box.y + box.h*0.05, box.w*0.40, box.h*0.90],
+        [box.x + box.w*0.75,    box.y + box.h*0.20, box.w*0.25, box.h*0.60],
+      ];
+    } else if(preset.slots === 4){
+      const tileW = box.w*0.78, gap = box.w*0.08;
+      const startX = (W - tileW)/2;
+      for(let i=0;i<4;i++) frames.push([startX + (i-1.5)*0, box.y, tileW, box.h]);
+      // Just show centered tile.
+      frames = [[startX, box.y, tileW, box.h]];
+    } else if(preset.slots === 6){
+      const g = state.gapPct/100;
+      const cw = (1-2*g)/3, ch = (1-g)/2;
+      for(let r=0;r<2;r++) for(let c=0;c<3;c++){
+        frames.push([box.x+c*(cw+g)*box.w, box.y+r*(ch+g)*box.h, cw*box.w, ch*box.h]);
+      }
+    } else if(preset.slots === 9){
+      const g = state.gapPct/100;
+      const c = (1-2*g)/3;
+      for(let r=0;r<3;r++) for(let col=0;col<3;col++){
+        frames.push([box.x+col*(c+g)*box.w, box.y+r*(c+g)*box.h, c*box.w, c*box.h]);
+      }
+    } else if(preset.slots === 5){
+      // Ribbon — show 3 sample tiles centered.
+      const tileH = box.h*0.55, tileW = tileH*1.4, gap = box.w*0.04;
+      const startX = (W - 3*tileW - 2*gap)/2;
+      for(let i=0;i<3;i++){
+        frames.push([startX + i*(tileW+gap), box.y + (box.h - tileH)/2, tileW, tileH]);
+      }
+    } else {
+      frames = [[box.x, box.y, box.w, box.h]];
+    }
+  } else {
+    // Custom mode placeholder = current layout's frames.
+    const layout = layouts[state.templateId];
+    if(layout.continuous){
+      frames = [[box.x, box.y, box.w, box.h]];
+    } else {
+      frames = layout.frames(W, H);
+    }
+  }
+  const stroke = state.bgMode==='dark' ? '#27272d' : '#cfcfca';
+  const fill   = state.bgMode==='dark' ? '#161618' : '#ececea';
+  const text   = state.bgMode==='dark' ? '#4a4a52' : '#9a9aa0';
+  ctx.save();
+  frames.forEach((f, i) => {
+    const [x,y,w,h] = f;
+    ctx.fillStyle = fill;
+    roundedRectStroke(ctx, x, y, w, h, Math.min(w,h)*0.02, stroke, Math.max(2, W*0.0015), true);
+    ctx.fillStyle = text;
+    ctx.textAlign = 'center';
+    ctx.font = `500 ${Math.min(w,h)*0.06}px -apple-system,"Inter",sans-serif`;
+    ctx.fillText(`Slot ${i+1}`, x + w/2, y + h/2 - Math.min(w,h)*0.01);
+    ctx.font = `400 ${Math.min(w,h)*0.035}px -apple-system,"Inter",sans-serif`;
+    ctx.fillText('Drop image', x + w/2, y + h/2 + Math.min(w,h)*0.05);
+  });
+  ctx.restore();
+}
+function roundedRectStroke(ctx, x, y, w, h, r, strokeColor, lineWidth, fillFirst){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+  if(fillFirst) ctx.fill();
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash([lineWidth*4, lineWidth*3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/* ----------------------------- presets ----------------------------- */
+/* Each preset is a fully choreographed animation that cycles through clips.
+   - slots: how many clips it shows per cycle
+   - cycleMs: duration of one cycle (one group of `slots` clips)
+   - render(ctx, W, H, clipsForCycle, tInCycle): draws the scene at time tInCycle (0..cycleMs)
+   Total reel length = cycleMs × ceil(clips.length / slots). */
+/* Presets use NORMALIZED time u ∈ [0, 1] within one cycle, so the cycle
+   duration can be set externally without rewriting the timing math. */
+const presets = {
+  heroReveal: {
+    name:'Hero Reveal',
+    desc:'Big shot rises in, drifts, sweeps off as the next arrives.',
+    mini:'<i style="left:14%;top:10%;width:72%;height:80%"></i>',
+    slots:1,
+    cycleMs:2800,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const entry = 0.22, exit = 0.22;
+      const cur = cs[0], nx = cs[1] || cs[0];
+      if(u < entry){
+        const k = easeOutQuint(u/entry);
+        const dy = (1-k) * box.h*0.20;
+        ctx.save(); ctx.globalAlpha = k;
+        drawClip(ctx, cur, [box.x, box.y+dy, box.w, box.h], 0.94+0.06*k, 1, 0, 0);
+        ctx.restore();
+      } else if(u > 1-exit){
+        const k = easeInOutQuint((u-(1-exit))/exit);
+        ctx.save(); ctx.globalAlpha = 1-k;
+        drawClip(ctx, cur, [box.x - k*W*0.28, box.y - k*H*0.20, box.w, box.h], 1+0.05*k, 1, 0, 0);
+        ctx.restore();
+        ctx.save(); ctx.globalAlpha = k;
+        drawClip(ctx, nx, [box.x + (1-k)*W*0.28, box.y + (1-k)*H*0.20, box.w, box.h], 0.94+0.06*k, 1, 0, 0);
+        ctx.restore();
+      } else {
+        // Held: subtle Ken Burns drift
+        const m = (u-entry)/(1-entry-exit);
+        const z = 1.0 + 0.06 * easeInOutCubic(m);
+        const dx = (m-0.5) * box.w*0.02;
+        drawClip(ctx, cur, [box.x+dx, box.y, box.w, box.h], z, 1, 0, 0);
+      }
+    }
+  },
+  cardCascade: {
+    name:'Card Cascade',
+    desc:'Six tiles fly in stacked, then sweep off right.',
+    mini:'<i style="left:4%;top:8%;width:28%;height:38%"></i><i style="left:36%;top:8%;width:28%;height:38%"></i><i style="left:68%;top:8%;width:28%;height:38%"></i><i style="left:4%;top:54%;width:28%;height:38%"></i><i style="left:36%;top:54%;width:28%;height:38%"></i><i style="left:68%;top:54%;width:28%;height:38%"></i>',
+    slots:6,
+    cycleMs:5500,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const g = state.gapPct/100;
+      const cw = (1 - 2*g) / 3, ch = (1 - g) / 2;
+      const tiles = [];
+      for(let r=0;r<2;r++) for(let c=0;c<3;c++){
+        tiles.push({
+          x: box.x + c*(cw+g)*box.w,
+          y: box.y + r*(ch+g)*box.h,
+          w: cw*box.w, h: ch*box.h,
+        });
+      }
+      // Normalized stagger windows
+      const entryWin = 0.12, exitWin = 0.16, stagger = 0.04;
+      tiles.forEach((tile, i) => {
+        const enterStart = i * stagger;
+        const enterEnd = enterStart + entryWin;
+        const exitStart = 1 - exitWin - (tiles.length-1-i)*stagger*0.6;
+        const exitEnd = exitStart + exitWin;
+        let alpha = 0, dx = 0, dy = 0, scale = 1;
+        if(u < enterStart) return;
+        if(u < enterEnd){
+          const k = easeOutQuint(clamp((u-enterStart)/entryWin, 0, 1));
+          alpha = k;
+          dy = (1-k)*tile.h*0.5;
+          scale = 0.88 + 0.12*k;
+        } else if(u < exitStart){
+          alpha = 1;
+        } else if(u < exitEnd){
+          const k = easeInOutQuint((u - exitStart)/exitWin);
+          alpha = 1 - k;
+          dx = k * W * 0.55;
+          scale = 1 - 0.04*k;
+        } else return;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawClip(ctx, cs[i % cs.length], [tile.x+dx, tile.y+dy, tile.w, tile.h], scale, 1, 0, 0);
+        ctx.restore();
+      });
+    }
+  },
+  focusPan: {
+    name:'Focus Pan',
+    desc:'Camera pans across a row, holding on each shot.',
+    mini:'<i style="left:18%;top:18%;width:64%;height:64%"></i><i style="left:-22%;top:24%;width:34%;height:52%;opacity:.5"></i><i style="left:88%;top:24%;width:34%;height:52%;opacity:.5"></i>',
+    slots:4,
+    cycleMs:8000,
+    render(ctx, W, H, cs, u){
+      const n = this.slots;
+      const box = inset(W,H);
+      const tileH = box.h, tileW = box.w * 0.78, gap = box.w * 0.08;
+      // Hold each clip ~60% of its segment, pan ~40%.
+      const seg = 1 / n;
+      const holdFrac = 0.55;
+      let pos = 0;
+      const segIdx = Math.min(n-1, Math.floor(u/seg));
+      const inSeg = (u - segIdx*seg) / seg;
+      if(segIdx === n-1){
+        pos = n-1;
+      } else if(inSeg < holdFrac){
+        pos = segIdx;
+      } else {
+        const pk = (inSeg - holdFrac)/(1-holdFrac);
+        pos = segIdx + easeInOutQuint(pk);
+      }
+      const focusCx = pos * (tileW + gap) + tileW/2;
+      const stripX = W/2 - focusCx;
+      const y = box.y;
+      for(let k=0;k<n;k++){
+        const x = stripX + k*(tileW+gap);
+        const d = Math.abs(k - pos);
+        const sc = 1 + 0.06 * clamp(1-d, 0, 1);
+        const a = 1 - clamp(d*0.35, 0, 0.7);
+        ctx.save();
+        ctx.globalAlpha = a;
+        drawClip(ctx, cs[k % cs.length], [x, y, tileW, tileH], sc, 1, 0, 0);
+        ctx.restore();
+      }
+    }
+  },
+  tripleSwitch: {
+    name:'Triple Switch',
+    desc:'Three cards smoothly trade L / center / R positions.',
+    mini:'<i style="left:2%;top:24%;width:24%;height:52%;opacity:.7"></i><i style="left:28%;top:14%;width:44%;height:72%"></i><i style="left:74%;top:24%;width:24%;height:52%;opacity:.7"></i>',
+    slots:3,
+    cycleMs:6000,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const positions = [
+        { x: box.x,                 y: box.y + box.h*0.20, w: box.w*0.25, h: box.h*0.60, a: 0.55 },
+        { x: box.x + box.w*0.30,    y: box.y + box.h*0.05, w: box.w*0.40, h: box.h*0.90, a: 1.00 },
+        { x: box.x + box.w*0.75,    y: box.y + box.h*0.20, w: box.w*0.25, h: box.h*0.60, a: 0.55 },
+      ];
+      const stepN = u * 3; // 0..3
+      const step = Math.min(2, Math.floor(stepN));
+      // Slow in/out per step — smoother than linear interpolation across the step.
+      const k = easeInOutQuint(stepN - step);
+      const fromAssign = (i) => (i + step) % 3;
+      const toAssign   = (i) => (i + step + 1) % 3;
+      const order = [0,1,2].sort((a,b)=>{
+        const sa = Math.max(positions[fromAssign(a)].w, positions[toAssign(a)].w);
+        const sb = Math.max(positions[fromAssign(b)].w, positions[toAssign(b)].w);
+        return sa - sb;
+      });
+      for(const i of order){
+        const p1 = positions[fromAssign(i)];
+        const p2 = positions[toAssign(i)];
+        const x = p1.x + (p2.x-p1.x)*k;
+        const y = p1.y + (p2.y-p1.y)*k;
+        const w = p1.w + (p2.w-p1.w)*k;
+        const h = p1.h + (p2.h-p1.h)*k;
+        const a = p1.a + (p2.a-p1.a)*k;
+        ctx.save();
+        ctx.globalAlpha = a;
+        drawClip(ctx, cs[i % cs.length], [x,y,w,h], 1, 1, 0, 0);
+        ctx.restore();
+      }
+    }
+  },
+  quickCuts: {
+    name:'Quick Cuts',
+    desc:'Snappy full-bleed cuts with diagonal wipes.',
+    mini:'<i style="left:2%;top:4%;width:96%;height:92%"></i>',
+    slots:1,
+    cycleMs:900,
+    render(ctx, W, H, cs, u){
+      const transFrac = 0.28;
+      const cur = cs[0], next = cs[1] || cs[0];
+      const box = inset(W,H);
+      drawClip(ctx, cur, [box.x, box.y, box.w, box.h], 1, 1, 0, 0);
+      if(u > 1-transFrac){
+        const k = easeInOutQuint((u-(1-transFrac))/transFrac);
+        ctx.save();
+        const skew = H*0.4;
+        const cutX = (W + skew) * k - skew;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(cutX, 0);
+        ctx.lineTo(cutX - skew, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+        ctx.clip();
+        drawClip(ctx, next, [box.x, box.y, box.w, box.h], 1, 1, 0, 0);
+        ctx.restore();
+      }
+    }
+  },
+  bentoStory: {
+    name:'Bento Story',
+    desc:'Bento grid where the hero tile rotates positions.',
+    mini:'<i style="left:4%;top:8%;width:58%;height:84%"></i><i style="left:66%;top:8%;width:30%;height:40%"></i><i style="left:66%;top:52%;width:30%;height:40%"></i>',
+    slots:3,
+    cycleMs:5400,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const g = state.gapPct/100;
+      const big = 0.62, rightW = 1-big-g, cellH = (1-g)/2;
+      const positions = [
+        { x: box.x,                       y: box.y,                        w: box.w*big,    h: box.h         },
+        { x: box.x + box.w*(big+g),       y: box.y,                        w: box.w*rightW, h: box.h*cellH   },
+        { x: box.x + box.w*(big+g),       y: box.y + box.h*(cellH+g),      w: box.w*rightW, h: box.h*cellH   },
+      ];
+      const stepN = u * 3;
+      const step = Math.min(2, Math.floor(stepN));
+      const k = easeInOutQuint(stepN - step);
+      const fromAssign = (i) => (i + step) % 3;
+      const toAssign   = (i) => (i + step + 1) % 3;
+      const order = [0,1,2].sort((a,b)=>{
+        const sa = Math.max(positions[fromAssign(a)].w, positions[toAssign(a)].w);
+        const sb = Math.max(positions[fromAssign(b)].w, positions[toAssign(b)].w);
+        return sa - sb;
+      });
+      for(const i of order){
+        const p1 = positions[fromAssign(i)];
+        const p2 = positions[toAssign(i)];
+        const x = p1.x + (p2.x-p1.x)*k;
+        const y = p1.y + (p2.y-p1.y)*k;
+        const w = p1.w + (p2.w-p1.w)*k;
+        const h = p1.h + (p2.h-p1.h)*k;
+        drawClip(ctx, cs[i % cs.length], [x,y,w,h], 1, 1, 0, 0);
+      }
+    }
+  },
+  spotlight: {
+    name:'Spotlight',
+    desc:'Iris-reveal with slow zoom and crossfade.',
+    mini:'<i style="left:12%;top:6%;width:76%;height:88%"></i>',
+    slots:1,
+    cycleMs:4200,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const entry = 0.18, exit = 0.18;
+      const cur = cs[0], nx = cs[1] || cs[0];
+      if(u < entry){
+        const k = easeOutQuint(u/entry);
+        ctx.save();
+        ctx.beginPath();
+        const cx = box.x+box.w/2, cy = box.y+box.h/2;
+        const r = Math.hypot(box.w, box.h)/2 * k;
+        ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();
+        drawClip(ctx, cur, [box.x, box.y, box.w, box.h], 1.06 - 0.06*k, 1, 0, 0);
+        ctx.restore();
+      } else if(u > 1-exit){
+        const k = easeInOutQuint((u-(1-exit))/exit);
+        ctx.save(); ctx.globalAlpha = 1-k;
+        drawClip(ctx, cur, [box.x, box.y, box.w, box.h], 1.0 + 0.06*k, 1, 0, 0);
+        ctx.restore();
+        ctx.save();
+        ctx.beginPath();
+        const cx = box.x+box.w/2, cy = box.y+box.h/2;
+        const r = Math.hypot(box.w, box.h)/2 * k;
+        ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();
+        drawClip(ctx, nx, [box.x, box.y, box.w, box.h], 1.06 - 0.06*k, 1, 0, 0);
+        ctx.restore();
+      } else {
+        const m = (u-entry)/(1-entry-exit);
+        const z = 1.0 + 0.08 * m;
+        drawClip(ctx, cur, [box.x, box.y, box.w, box.h], z, 1, 0, 0);
+      }
+    }
+  },
+
+  /* ----- new presets ----- */
+
+  stackCards: {
+    name:'Stack Cards',
+    desc:'Deck-style stack — top card peels off, next rises.',
+    mini:'<i style="left:24%;top:18%;width:48%;height:64%;transform:rotate(-4deg)"></i><i style="left:28%;top:14%;width:48%;height:68%;opacity:.9"></i><i style="left:32%;top:18%;width:48%;height:64%;opacity:.7"></i>',
+    slots:3,
+    cycleMs:3200,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const cw = box.w*0.5, ch = box.h*0.85;
+      const cx = box.x + box.w/2, cy = box.y + box.h/2;
+      // Three z-stacked cards, top one peels away over the cycle.
+      const layers = [
+        { z:0 }, { z:1 }, { z:2 }, // back to front
+      ];
+      const k = easeInOutQuint(u);
+      // Front card slides up-right + fades + rotates out; others advance forward.
+      for(let i=0;i<3;i++){
+        const clip = cs[i % cs.length];
+        let depth = i; // 0=back, 2=front
+        // Advance depth by u: front goes from 2 to 3 (leaves), others move forward.
+        const eff = depth + 1 - k;
+        // Map eff (in [-1..3]) to position
+        if(eff < -0.05 || eff > 3.05) continue;
+        const layerOffset = (eff - 2) * 18;
+        const scale = 1 + (eff - 2) * 0.04;
+        const rot = (eff - 2) * 0.12;
+        const alpha = clamp(1 - Math.max(0, eff - 2)*1.6, 0, 1) * clamp((eff+1), 0, 1);
+        const px = cx + Math.max(0,eff-2) * W*0.35;
+        const py = cy + Math.max(0,eff-2) * -H*0.25 + layerOffset;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(px, py); ctx.rotate(rot); ctx.translate(-px, -py);
+        drawClip(ctx, clip, [px - cw/2, py - ch/2, cw, ch], scale, 1, 0, 0);
+        ctx.restore();
+      }
+    }
+  },
+  gridReveal: {
+    name:'Grid Reveal',
+    desc:'3×3 cells light up in sequence, then collapse to one.',
+    mini:'<i style="left:4%;top:4%;width:28%;height:28%"></i><i style="left:36%;top:4%;width:28%;height:28%"></i><i style="left:68%;top:4%;width:28%;height:28%"></i><i style="left:4%;top:36%;width:28%;height:28%"></i><i style="left:36%;top:36%;width:28%;height:28%"></i><i style="left:68%;top:36%;width:28%;height:28%"></i><i style="left:4%;top:68%;width:28%;height:28%"></i><i style="left:36%;top:68%;width:28%;height:28%"></i><i style="left:68%;top:68%;width:28%;height:28%"></i>',
+    slots:9,
+    cycleMs:6500,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const g = state.gapPct/100;
+      const c = (1 - 2*g) / 3;
+      const tiles = [];
+      for(let r=0;r<3;r++) for(let col=0;col<3;col++){
+        tiles.push({
+          x: box.x + col*(c+g)*box.w,
+          y: box.y + r*(c+g)*box.h,
+          w: c*box.w, h: c*box.h,
+        });
+      }
+      const order = [4,0,2,6,8,1,5,7,3]; // center -> corners -> sides
+      const revealEnd = 0.55, collapseStart = 0.75;
+      const perTile = revealEnd / order.length;
+      tiles.forEach((tile, i) => {
+        const orderIdx = order.indexOf(i);
+        const tStart = orderIdx * perTile;
+        const tEnd = tStart + perTile + 0.05; // slight overlap
+        let alpha = 0, scale = 1;
+        if(u >= tStart){
+          if(u < tEnd){
+            const k = easeOutQuint((u-tStart)/(tEnd-tStart));
+            alpha = k;
+            scale = 0.86 + 0.14*k;
+          } else if(u < collapseStart){
+            alpha = 1; scale = 1;
+          } else {
+            // Collapse all into center cell (tile index 4)
+            const k = easeInOutQuint((u - collapseStart)/(1 - collapseStart));
+            const tgt = tiles[4];
+            const dx = (tgt.x - tile.x) * k;
+            const dy = (tgt.y - tile.y) * k;
+            const dw = tile.w + (tgt.w - tile.w)*k;
+            const dh = tile.h + (tgt.h - tile.h)*k;
+            ctx.save();
+            ctx.globalAlpha = i===4 ? 1 : 1-k;
+            drawClip(ctx, cs[i % cs.length], [tile.x+dx, tile.y+dy, dw, dh], 1, 1, 0, 0);
+            ctx.restore();
+            return;
+          }
+        } else return;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        drawClip(ctx, cs[i % cs.length], [tile.x, tile.y, tile.w, tile.h], scale, 1, 0, 0);
+        ctx.restore();
+      });
+    }
+  },
+  splitReveal: {
+    name:'Split Reveal',
+    desc:'Two halves slide in from opposite sides.',
+    mini:'<i style="left:0;top:0;width:50%;height:100%"></i><i style="left:50%;top:0;width:50%;height:100%;opacity:.7"></i>',
+    slots:2,
+    cycleMs:3400,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const g = state.gapPct/200; // half gap so total = gapPct/100
+      const cw = (box.w - g*W*2)/2;
+      const entry = 0.25, exit = 0.20;
+      const left = cs[0], right = cs[1] || cs[0];
+      // Left slides from top, right slides from bottom.
+      const kIn = u < entry ? easeOutQuint(u/entry) : 1;
+      const kOut = u > 1-exit ? easeInOutQuint((u-(1-exit))/exit) : 0;
+      const leftDy = (1-kIn)*-H*0.6 + kOut*-H*0.6;
+      const rightDy = (1-kIn)*H*0.6 + kOut*H*0.6;
+      const alpha = 1 - kOut;
+      ctx.save(); ctx.globalAlpha = alpha;
+      drawClip(ctx, left,  [box.x,            box.y + leftDy,  cw, box.h], 1, 1, 0, 0);
+      drawClip(ctx, right, [box.x + cw + g*W*2, box.y + rightDy, cw, box.h], 1, 1, 0, 0);
+      ctx.restore();
+    }
+  },
+  polaroidDrop: {
+    name:'Polaroid Drop',
+    desc:'Photos drop in with slight rotation, like real polaroids.',
+    mini:'<i style="left:10%;top:14%;width:42%;height:72%;transform:rotate(-5deg)"></i><i style="left:46%;top:14%;width:42%;height:72%;transform:rotate(4deg);opacity:.9"></i>',
+    slots:4,
+    cycleMs:4500,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const cw = box.w*0.42, ch = box.h*0.78;
+      // Four random-feeling but deterministic positions/rotations.
+      const layout = [
+        { x: box.x + box.w*0.05, y: box.y + box.h*0.10, r:-0.10 },
+        { x: box.x + box.w*0.30, y: box.y + box.h*0.05, r: 0.06 },
+        { x: box.x + box.w*0.55, y: box.y + box.h*0.12, r:-0.04 },
+        { x: box.x + box.w*0.32, y: box.y + box.h*0.20, r: 0.09 },
+      ];
+      const entryWin = 0.18, stagger = 0.10, holdEnd = 0.78, exitWin = 0.18;
+      layout.forEach((p, i) => {
+        const tStart = i*stagger;
+        const tEnd = tStart + entryWin;
+        let alpha=0, dy=0, rot = p.r, scale=1;
+        if(u < tStart) return;
+        if(u < tEnd){
+          const k = easeOutQuint(clamp((u-tStart)/entryWin, 0, 1));
+          alpha = k;
+          dy = (1-k) * -H*0.55;
+          rot = p.r * (0.4 + 0.6*k);
+          scale = 0.92 + 0.08*k;
+        } else if(u < holdEnd){
+          alpha = 1;
+        } else if(u < holdEnd + exitWin){
+          const k = easeInOutQuint((u-holdEnd)/exitWin);
+          alpha = 1 - k;
+          scale = 1 - 0.06*k;
+          dy = k * H*0.15;
+        } else return;
+        const cx = p.x + cw/2, cy = p.y + ch/2 + dy;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
+        drawClip(ctx, cs[i % cs.length], [p.x, p.y + dy, cw, ch], scale, 1, 0, 0);
+        ctx.restore();
+      });
+    }
+  },
+  cinematicPush: {
+    name:'Cinematic Push',
+    desc:'Slow cinematic push-in with deep crossfade.',
+    mini:'<i style="left:8%;top:8%;width:84%;height:84%"></i>',
+    slots:1,
+    cycleMs:4800,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const cur = cs[0], nx = cs[1] || cs[0];
+      const crossStart = 0.78;
+      // Continuous Ken Burns through whole cycle.
+      const z = 1.0 + 0.18 * easeInOutCubic(u);
+      const dx = (u-0.5) * box.w*0.06;
+      drawClip(ctx, cur, [box.x+dx, box.y, box.w, box.h], z, 1, 0, 0);
+      if(u > crossStart){
+        const k = easeInOutQuint((u-crossStart)/(1-crossStart));
+        ctx.save(); ctx.globalAlpha = k;
+        ctx.filter = `blur(${(1-k)*6}px)`;
+        const nz = 1.05 + 0.05*k;
+        drawClip(ctx, nx, [box.x, box.y, box.w, box.h], nz, 1, 0, 0);
+        ctx.restore();
+      }
+      // Vignette
+      const vg = ctx.createRadialGradient(W/2,H/2, Math.min(W,H)*0.3, W/2,H/2, Math.max(W,H)*0.7);
+      vg.addColorStop(0,'rgba(0,0,0,0)');
+      vg.addColorStop(1, state.bgMode==='dark'?'rgba(0,0,0,0.55)':'rgba(0,0,0,0.18)');
+      ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
+    }
+  },
+  zoomTour: {
+    name:'Zoom Tour',
+    desc:'Zooms into each design region of a grid in turn.',
+    mini:'<i style="left:8%;top:14%;width:84%;height:72%"></i>',
+    slots:4,
+    cycleMs:7000,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      // Lay 4 clips out in a 2x2 logical grid; "camera" zooms in on each.
+      const cells = [
+        {x:0,   y:0,   w:0.5, h:0.5},
+        {x:0.5, y:0,   w:0.5, h:0.5},
+        {x:0,   y:0.5, w:0.5, h:0.5},
+        {x:0.5, y:0.5, w:0.5, h:0.5},
+      ];
+      const seg = 1/4, holdFrac = 0.55;
+      const idx = Math.min(3, Math.floor(u/seg));
+      const inSeg = (u - idx*seg)/seg;
+      const nextIdx = (idx+1) % 4;
+      let cam = cells[idx];
+      if(inSeg > holdFrac){
+        const k = easeInOutQuint((inSeg - holdFrac)/(1-holdFrac));
+        const a = cells[idx], b = cells[nextIdx];
+        cam = {x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k, w:a.w+(b.w-a.w)*k, h:a.h+(b.h-a.h)*k};
+      }
+      // Render full grid scaled and translated so cam fills the box.
+      const scale = 1/cam.w; // assumes square cells
+      const ox = box.x - cam.x * box.w * scale;
+      const oy = box.y - cam.y * box.h * scale;
+      cells.forEach((cell, i) => {
+        const x = ox + cell.x*box.w*scale;
+        const y = oy + cell.y*box.h*scale;
+        const w = cell.w*box.w*scale;
+        const h = cell.h*box.h*scale;
+        // Cull entirely off-screen.
+        if(x+w < box.x-50 || x > box.x+box.w+50 || y+h < box.y-50 || y > box.y+box.h+50) return;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
+        drawClip(ctx, cs[i % cs.length], [x,y,w,h], 1, 1, 0, 0);
+        ctx.restore();
+      });
+    }
+  },
+  ribbon: {
+    name:'Ribbon',
+    desc:'Cards drift across in a flowing ribbon.',
+    mini:'<i style="left:-10%;top:32%;width:28%;height:36%;transform:rotate(-6deg)"></i><i style="left:22%;top:24%;width:28%;height:48%;transform:rotate(2deg)"></i><i style="left:54%;top:32%;width:28%;height:36%;transform:rotate(6deg);opacity:.85"></i>',
+    slots:5,
+    cycleMs:6000,
+    render(ctx, W, H, cs, u){
+      const box = inset(W,H);
+      const n = this.slots;
+      const tileH = box.h*0.55;
+      const tileW = tileH * 1.4; // roughly 7:5
+      const gap = box.w * 0.04;
+      const step = tileW + gap;
+      // Each card sweeps across L→R during the cycle. Each is offset.
+      const easedU = easeInOutQuint(u);
+      const travel = (n+1) * step;
+      for(let i=0;i<n;i++){
+        const off = i / n; // start offset 0..1
+        const localU = (easedU + off) % 1;
+        const x = -tileW + localU * (W + tileW);
+        const rot = Math.sin(localU*Math.PI) * 0.10;
+        const y = box.y + (box.h - tileH)/2 + Math.cos(localU*Math.PI*2 - Math.PI) * H*0.06;
+        const dist = Math.abs(x + tileW/2 - W/2)/W;
+        const alpha = 1 - clamp(dist*1.4, 0, 0.8);
+        const cx = x + tileW/2, cy = y + tileH/2;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(cx,cy); ctx.rotate(rot); ctx.translate(-cx,-cy);
+        drawClip(ctx, cs[i % cs.length], [x, y, tileW, tileH], 1, 1, 0, 0);
+        ctx.restore();
+      }
+    }
+  },
+};
+
+/* ----------------------------- timeline ----------------------------- */
+function computeTotal(){
+  if(state.mode === 'preset'){
+    const preset = presets[state.presetId];
+    const slots = preset.slots;
+    const cycles = Math.max(1, Math.ceil(state.clips.length / slots));
+    const effective = state.presetCycleMs / state.speed;
+    state.totalMs = cycles * effective;
+    $('#time').textContent = `${fmtMs(0)} / ${fmtMs(state.totalMs)}`;
+    return;
+  }
+  const layout = layouts[state.templateId];
+  let units;
+  if(layout.continuous){
+    // Continuous layouts pace by total clips, not chunks
+    units = Math.max(1, state.clips.length);
+  } else {
+    units = Math.max(1, Math.ceil(state.clips.length / layout.chunk));
+  }
+  state.totalMs = units * state.perDurMs;
+  if(state.totalMs <= 0) state.totalMs = state.perDurMs;
+  $('#time').textContent = `${fmtMs(0)} / ${fmtMs(state.totalMs)}`;
+}
+
+function render(tMs){
+  const W=cv.width,H=cv.height;
+  ctx.fillStyle = bgColor();
+  ctx.fillRect(0,0,W,H);
+
+  if(state.clips.length===0){
+    drawEmptySlots(ctx, W, H);
+    return;
+  }
+
+  // Preset mode: hand off the whole frame to the preset's render fn (normalized u).
+  if(state.mode === 'preset'){
+    const preset = presets[state.presetId];
+    const slots = preset.slots;
+    const effective = state.presetCycleMs / state.speed;
+    const cycleIdx = Math.floor(tMs / effective);
+    const tInCycle = tMs - cycleIdx*effective;
+    const u = clamp(tInCycle / effective, 0, 1);
+    const base = (cycleIdx * slots) % state.clips.length;
+    const cs = [];
+    for(let i=0;i<Math.max(slots, 2);i++){
+      cs.push(state.clips[(base + i) % state.clips.length]);
+    }
+    preset.render(ctx, W, H, cs, u);
+    return;
+  }
+
+  const layout = layouts[state.templateId];
+
+  // Continuous layouts draw everything themselves with built-in motion.
+  if(layout.continuous){
+    layout.draw(ctx, W, H, state.clips, tMs, state.totalMs);
+    return;
+  }
+
+  const chunk = layout.chunk;
+  const units = Math.ceil(state.clips.length / chunk);
+  const slot = Math.min(units-1, Math.floor(tMs / state.perDurMs));
+  const slotStartMs = slot*state.perDurMs;
+  const inSlotMs = tMs - slotStartMs;
+
+  const tr = clamp(state.transMs, 0, state.perDurMs/2);
+  let phase, t;
+  if(inSlotMs < tr){ phase='in'; t = tr===0 ? 1 : inSlotMs/tr; }
+  else if(inSlotMs > state.perDurMs - tr){ phase='out'; t = tr===0 ? 0 : (inSlotMs - (state.perDurMs - tr))/tr; }
+  else { phase='hold'; const holdLen = state.perDurMs - 2*tr; t = holdLen<=0 ? 0 : (inSlotMs - tr)/holdLen; }
+
+  const frames = layout.frames(W,H);
+  const effect = effects[state.effectId] || effects.none;
+  const base = slot*chunk;
+
+  if(layout.pre) layout.pre(ctx, W, H, frames[0]);
+
+  for(let i=0;i<chunk;i++){
+    const idx = (base + i) % state.clips.length;
+    const clip = state.clips[idx];
+    if(!clip) continue;
+    const frame = frames[i];
+    // stagger each tile slightly in chunked layouts
+    let lt = t, lphase = phase;
+    if(chunk>1 && phase!=='hold'){
+      const stagger = i * 0.08;
+      if(phase==='in'){
+        const adj = clamp((t - stagger)/(1 - stagger), 0, 1);
+        lt = adj;
+      } else if(phase==='out'){
+        const adj = clamp((t + stagger - (chunk-1)*0.08)/(1 - (chunk-1)*0.08), 0, 1);
+        lt = adj;
+      }
+    }
+    ctx.save();
+    // Per-tile rotation (stack layouts)
+    if(layout.rotations && layout.rotations[i]){
+      const [fx,fy,fw,fh] = frame;
+      const cxr = fx+fw/2, cyr = fy+fh/2;
+      ctx.translate(cxr, cyr); ctx.rotate(layout.rotations[i]); ctx.translate(-cxr, -cyr);
+    }
+    // Per-tile polygon clip (diagonal split)
+    if(layout.clips && layout.clips[i]){
+      const pts = layout.clips[i](W,H);
+      ctx.beginPath();
+      pts.forEach((p,j)=> j===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]));
+      ctx.closePath();
+      ctx.clip();
+    }
+    effect.fn(ctx, clip, frame, lt, lphase, tMs, state.perDurMs);
+    ctx.restore();
+  }
+}
+
+/* ----------------------------- playback ----------------------------- */
+let rafId = null;
+function tick(){
+  if(!state.playing) return;
+  const now = performance.now();
+  let t = now - state.t0;
+  if(t >= state.totalMs){
+    if(state.loop){ state.t0 = now; t = 0; }
+    else { pause(); t = state.totalMs; }
+  }
+  state.pausedMs = t;
+  $('#seek').value = String(Math.round((t/state.totalMs)*1000));
+  $('#time').textContent = `${fmtMs(t)} / ${fmtMs(state.totalMs)}`;
+  render(t);
+  rafId = requestAnimationFrame(tick);
+}
+function play(){
+  if(state.clips.length===0) return;
+  computeTotal();
+  state.playing = true;
+  state.t0 = performance.now() - state.pausedMs;
+  $('#btnPlay').textContent='Pause';
+  $('#btnPlay2').textContent='▮▮';
+  rafId = requestAnimationFrame(tick);
+}
+function pause(){
+  state.playing = false;
+  cancelAnimationFrame(rafId);
+  $('#btnPlay').textContent='Play';
+  $('#btnPlay2').textContent='▶';
+}
+function togglePlay(){ state.playing ? pause() : play(); }
+function restart(){ state.pausedMs = 0; if(state.playing){ state.t0 = performance.now(); } render(0); $('#seek').value=0; }
+
+/* ----------------------------- UI ----------------------------- */
+function renderPresets(){
+  const wrap = $('#presets'); wrap.innerHTML = '';
+  Object.entries(presets).forEach(([id, p]) => {
+    const el = document.createElement('div');
+    el.className = 'preset' + (id === state.presetId ? ' sel' : '');
+    el.innerHTML = `<div class="mini">${p.mini}</div><div class="info"><div class="name">${p.name}</div><div class="desc">${p.desc}</div></div>`;
+    el.onclick = ()=>{
+      state.presetId = id;
+      // Snap duration input to the preset's natural cycleMs.
+      state.presetCycleMs = p.cycleMs;
+      const dEl = $('#presetDur'); if(dEl) dEl.value = p.cycleMs;
+      renderPresets(); computeTotal(); render(state.pausedMs);
+    };
+    wrap.appendChild(el);
+  });
+}
+function renderLayouts(){
+  const wrap = $('#templates'); wrap.innerHTML='';
+  Object.entries(layouts).forEach(([id,t])=>{
+    const el = document.createElement('div');
+    el.className='tpl'+(id===state.templateId?' sel':'');
+    el.innerHTML = `<div class="name">${t.name}</div><div class="desc">${t.desc}</div><div class="mini">${t.mini}</div>`;
+    el.onclick = ()=>{ state.templateId=id; renderLayouts(); computeTotal(); render(state.pausedMs); };
+    wrap.appendChild(el);
+  });
+}
+function renderEffects(){
+  const wrap = $('#effects'); wrap.innerHTML='';
+  Object.entries(effects).forEach(([id,e])=>{
+    const el = document.createElement('div');
+    el.className = 'fx'+(id===state.effectId?' sel':'');
+    el.textContent = e.name;
+    el.onclick = ()=>{ state.effectId=id; renderEffects(); render(state.pausedMs); };
+    wrap.appendChild(el);
+  });
+}
+function renderClips(){
+  const wrap = $('#clips'); wrap.innerHTML='';
+  state.clips.forEach((c,i)=>{
+    const row = document.createElement('div');
+    row.className='clip';
+    row.draggable = true;
+    row.dataset.id = c.id;
+    row.innerHTML = `
+      <img class="thumb" src="${c.thumb}" />
+      <div class="meta">
+        <div class="nm">${c.name}</div>
+        <div class="sm">${c.type} · ${c.w}×${c.h}</div>
+      </div>
+      <button class="x" title="Remove">×</button>
+    `;
+    row.querySelector('.x').onclick = ()=>{ state.clips.splice(i,1); renderClips(); computeTotal(); render(state.pausedMs); };
+    row.addEventListener('dragstart', e=>{ row.classList.add('drag'); e.dataTransfer.setData('id', c.id); });
+    row.addEventListener('dragend', ()=> row.classList.remove('drag'));
+    row.addEventListener('dragover', e=>{ e.preventDefault(); });
+    row.addEventListener('drop', e=>{
+      e.preventDefault();
+      const id = e.dataTransfer.getData('id');
+      const from = state.clips.findIndex(x=>x.id===id);
+      const to = i;
+      if(from<0||from===to) return;
+      const [moved] = state.clips.splice(from,1);
+      state.clips.splice(to,0,moved);
+      renderClips();
+      render(state.pausedMs);
+    });
+    wrap.appendChild(row);
+  });
+}
+
+/* ----------------------------- file ingest ----------------------------- */
+async function ingestFiles(fileList){
+  setStatus('Loading designs…');
+  for(const f of fileList){
+    try{
+      const isVideo = f.type.startsWith('video');
+      const url = URL.createObjectURL(f);
+      if(isVideo){
+        const v = document.createElement('video');
+        v.src = url; v.muted=true; v.loop=true; v.playsInline=true;
+        await new Promise((res,rej)=>{ v.onloadedmetadata = res; v.onerror = rej; });
+        await v.play().catch(()=>{});
+        const thumb = await captureThumb(v, v.videoWidth, v.videoHeight);
+        state.clips.push({id:uuid(),name:f.name,type:'video',el:v,w:v.videoWidth,h:v.videoHeight,thumb});
+      }else{
+        const img = new Image();
+        img.src = url;
+        await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; });
+        const thumb = await captureThumb(img, img.naturalWidth, img.naturalHeight);
+        state.clips.push({id:uuid(),name:f.name,type:'image',el:img,w:img.naturalWidth,h:img.naturalHeight,thumb});
+      }
+    }catch(e){ console.warn('skip',f.name,e); }
+  }
+  rebuildScaledCache();
+  renderClips();
+  computeTotal();
+  render(state.pausedMs);
+  setStatus('', false);
+}
+function captureThumb(src, w, h){
+  return new Promise(res=>{
+    const c = document.createElement('canvas');
+    const r = 120/Math.max(w,h);
+    c.width = Math.round(w*r); c.height = Math.round(h*r);
+    c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+    res(c.toDataURL('image/jpeg',0.7));
+  });
+}
+
+/* ----------------------------- export ----------------------------- */
+async function exportWebM(){
+  if(state.clips.length===0){ alert('Add some designs first.'); return; }
+  pause();
+  computeTotal();
+  const fps = clamp(parseInt($('#fps').value)||60,24,60);
+  const br  = clamp(parseInt($('#br').value)||20,2,80);
+  setStatus('Exporting…');
+
+  const stream = cv.captureStream(fps);
+  let mime = 'video/webm;codecs=vp9';
+  if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm;codecs=vp8';
+  if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm';
+  const rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond: br*1_000_000});
+  const chunks = [];
+  rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+  const done = new Promise(r => rec.onstop = r);
+
+  rec.start();
+  const totalMs = state.totalMs;
+  const step = 1000/fps;
+  const startWall = performance.now();
+  for(let t=0; t<=totalMs+1; t+=step){
+    render(t);
+    const target = startWall + t;
+    while(performance.now() < target){ await new Promise(r=>requestAnimationFrame(r)); }
+    setStatus(`Exporting… ${Math.min(100,Math.round(t/totalMs*100))}%`);
+  }
+  rec.stop();
+  await done;
+  const blob = new Blob(chunks, {type: mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `showreel-${state.aspect.replace(':','x')}-${Date.now()}.webm`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setStatus('', false);
+}
+
+/* ----------------------------- wiring ----------------------------- */
+function wire(){
+  const drop = $('#drop'), file = $('#file');
+  drop.addEventListener('click', ()=> file.click());
+  file.addEventListener('change', e => ingestFiles(e.target.files));
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', e => ingestFiles(e.dataTransfer.files));
+
+  window.addEventListener('dragover', e=>e.preventDefault());
+  window.addEventListener('drop', e=>{
+    e.preventDefault();
+    if(e.dataTransfer?.files?.length) ingestFiles(e.dataTransfer.files);
+  });
+
+  $('#btnPlay').onclick = togglePlay;
+  $('#btnPlay2').onclick = togglePlay;
+  $('#btnExport').onclick = exportWebM;
+  $('#btnReset').onclick = ()=>{
+    if(!confirm('Clear all clips?')) return;
+    state.clips = []; state.pausedMs=0; pause(); renderClips(); computeTotal(); render(0);
+  };
+
+  $('#seek').oninput = e => {
+    const t = (+e.target.value/1000) * state.totalMs;
+    state.pausedMs = t;
+    if(state.playing) state.t0 = performance.now() - t;
+    render(t);
+    $('#time').textContent = `${fmtMs(t)} / ${fmtMs(state.totalMs)}`;
+  };
+
+  $('#dur').onchange = e=>{
+    state.perDurMs = clamp(parseInt(e.target.value)||2000, 100, 60000);
+    e.target.value = state.perDurMs;
+    computeTotal(); render(state.pausedMs);
+  };
+  $('#trans').onchange = e=>{
+    state.transMs = clamp(parseInt(e.target.value)||0, 0, 5000);
+    e.target.value = state.transMs;
+    render(state.pausedMs);
+  };
+  $('#loop').onchange = e=>{ state.loop = e.target.checked; };
+  $('#fps').onchange = e=>{ state.fps = +e.target.value||30; };
+  $('#br').onchange  = e=>{ state.br = +e.target.value||8; };
+
+  $('#aspect').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#aspect button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    state.aspect = b.dataset.v;
+    applyAspect();
+    render(state.pausedMs);
+  });
+  $('#bgmode').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#bgmode button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    state.bgMode = b.dataset.v;
+    render(state.pausedMs);
+  });
+  $('#presetDur').onchange = e=>{
+    state.presetCycleMs = clamp(parseInt(e.target.value)||2800, 500, 30000);
+    e.target.value = state.presetCycleMs;
+    computeTotal(); render(state.pausedMs);
+  };
+  $('#speed').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#speed button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    state.speed = parseFloat(b.dataset.v) || 1;
+    computeTotal(); render(state.pausedMs);
+  });
+  $('#modeTabs').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#modeTabs button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    state.mode = b.dataset.v;
+    $('#presetPanel').hidden = state.mode !== 'preset';
+    $('#customPanel').hidden = state.mode !== 'custom';
+    computeTotal();
+    render(state.pausedMs);
+  });
+  $('#padding').onchange = e=>{
+    state.paddingPct = clamp(parseFloat(e.target.value)||0, 0, 20);
+    e.target.value = state.paddingPct;
+    render(state.pausedMs);
+  };
+  $('#gap').onchange = e=>{
+    state.gapPct = clamp(parseFloat(e.target.value)||0, 0, 6);
+    e.target.value = state.gapPct;
+    render(state.pausedMs);
+  };
+  $('#fit').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#fit button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    state.fit = b.dataset.v;
+    render(state.pausedMs);
+  });
+  $('#quality').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#quality button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    state.quality = b.dataset.v;
+    // Auto-pick a sane default bitrate for the new resolution.
+    const brDefaults = {hd:8, fhd:20, qhd:35, uhd:60};
+    state.br = brDefaults[state.quality];
+    $('#br').value = state.br;
+    applyAspect();
+    render(state.pausedMs);
+  });
+
+  window.addEventListener('keydown', e=>{
+    if(e.target.matches('input,textarea')) return;
+    if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+    if(e.key==='r' || e.key==='R'){ restart(); }
+  });
+}
+
+/* ----------------------------- init ----------------------------- */
+applyAspect();
+renderPresets();
+renderLayouts();
+renderEffects();
+computeTotal();
+render(0);
+wire();
+
+/* ----------------------------- PWA: service worker ----------------------------- */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.warn('SW registration failed:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
