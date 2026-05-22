@@ -43,6 +43,10 @@
   .btn.ghost{border-color:transparent}
   .btn.ghost:hover{border-color:var(--line)}
   .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .iconBtn{padding:6px 8px}
+  .iconBtn .ic{width:16px;height:16px;display:block;color:var(--muted)}
+  .iconBtn:hover .ic{color:var(--text)}
+  .iconBtn.muted .ic{color:var(--muted)}
   .panel{background:var(--panel);overflow:auto}
   .panel.left{border-right:1px solid var(--line);padding:14px}
   .panel.right{border-left:1px solid var(--line);padding:14px}
@@ -146,6 +150,16 @@
       Showreel Studio
     </div>
     <div class="actions">
+      <button class="btn ghost iconBtn" id="btnSound" title="Toggle sound" aria-label="Toggle sound">
+        <svg class="ic ic-on" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M5 9v6h3.5L13 19V5L8.5 9H5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M16 9.5c1 .7 1.5 1.6 1.5 2.5s-.5 1.8-1.5 2.5M18 7c2 1.4 3 3 3 5s-1 3.6-3 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <svg class="ic ic-off" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:none">
+          <path d="M5 9v6h3.5L13 19V5L8.5 9H5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M17 9l5 5M22 9l-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
       <button class="btn ghost" id="btnReset">Reset</button>
       <button class="btn" id="btnPlay">Play</button>
       <button class="btn primary" id="btnExport">Export</button>
@@ -372,6 +386,103 @@ function setStatus(msg, show=true){
 }
 function bgColor(){ return state.bgMode==='dark' ? '#0a0a0b' : '#f5f5f3'; }
 function fgColor(){ return state.bgMode==='dark' ? '#ececee' : '#0f0f10'; }
+
+/* ----------------------------- audio (UI sounds) -----------------------------
+   Synthesized via Web Audio API so we don't ship any audio files. Sounds
+   are short, low-volume, and only play on real user clicks (e.isTrusted),
+   so programmatic UI updates never make noise. */
+const audio = {
+  ctx: null,
+  muted: localStorage.getItem('showreel.muted') === '1',
+  ensure(){
+    if(!this.ctx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return false;
+      this.ctx = new AC();
+    }
+    if(this.ctx.state === 'suspended') this.ctx.resume();
+    return true;
+  },
+  setMuted(m){
+    this.muted = !!m;
+    localStorage.setItem('showreel.muted', m ? '1' : '0');
+    const btn = document.getElementById('btnSound');
+    if(btn){
+      btn.classList.toggle('muted', m);
+      const on = btn.querySelector('.ic-on'), off = btn.querySelector('.ic-off');
+      if(on) on.style.display = m ? 'none' : 'block';
+      if(off) off.style.display = m ? 'block' : 'none';
+    }
+  },
+  // Short envelope-shaped tone.
+  tone(freq, dur=0.05, type='sine', peak=0.05, attack=0.005){
+    if(this.muted || !this.ensure()) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t+attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    osc.connect(g); g.connect(this.ctx.destination);
+    osc.start(t); osc.stop(t+dur+0.02);
+  },
+  play(name){
+    if(this.muted || !this.ensure()) return;
+    const t = this.ctx.currentTime;
+    if(name === 'click'){
+      this.tone(880, 0.045, 'triangle', 0.05);
+    } else if(name === 'tick'){
+      this.tone(1500, 0.025, 'square', 0.025);
+    } else if(name === 'pop'){
+      // small two-note chirp
+      this.tone(620, 0.06, 'sine', 0.05);
+      setTimeout(() => this.tone(880, 0.05, 'sine', 0.04), 30);
+    } else if(name === 'sweep'){
+      // rising sweep for special actions (Inspire, Export)
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, t);
+      osc.frequency.exponentialRampToValueAtTime(1320, t+0.28);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.06, t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.30);
+      osc.connect(g); g.connect(this.ctx.destination);
+      osc.start(t); osc.stop(t+0.32);
+      // soft harmonic
+      this.tone(660, 0.18, 'triangle', 0.025);
+    } else if(name === 'success'){
+      // 3-note ascending arpeggio (export complete)
+      this.tone(523, 0.10, 'triangle', 0.05);
+      setTimeout(() => this.tone(659, 0.10, 'triangle', 0.05), 90);
+      setTimeout(() => this.tone(784, 0.18, 'triangle', 0.05), 180);
+    }
+  },
+};
+
+// Map a clicked element to a sound name. Returns null when no sound applies.
+function _classifyClickForSound(target){
+  if(!target || !target.closest) return null;
+  if(target.closest('#btnSound')) return null; // toggling mute itself shouldn't beep
+  if(target.closest('#inspireBtn')) return 'sweep';
+  if(target.closest('#btnExport')) return 'sweep';
+  if(target.closest('.preset')) return 'pop';
+  if(target.closest('.tpl')) return 'pop';
+  if(target.closest('.fx')) return 'tick';
+  if(target.closest('.toggle button')) return 'tick';
+  if(target.closest('.clip .x')) return 'tick';
+  if(target.closest('.btn')) return 'click';
+  return null;
+}
+
+// Single global click listener — only acts on trusted (real user) clicks.
+document.addEventListener('click', (e) => {
+  if(!e.isTrusted) return;
+  const sound = _classifyClickForSound(e.target);
+  if(sound) audio.play(sound);
+}, true);
 
 /* ----------------------------- canvas ----------------------------- */
 const cv = $('#cv');
@@ -2081,6 +2192,7 @@ async function exportWebM(){
   a.download = `showreel-${state.aspect.replace(':','x')}-${Date.now()}.webm`;
   document.body.appendChild(a); a.click(); a.remove();
   setStatus('', false);
+  audio.play('success');
 }
 
 /* ----------------------------- wiring ----------------------------- */
@@ -2102,6 +2214,14 @@ function wire(){
   $('#btnPlay2').onclick = togglePlay;
   $('#btnExport').onclick = exportWebM;
   $('#inspireBtn').onclick = inspireMe;
+  $('#btnSound').onclick = () => { audio.setMuted(!audio.muted); };
+  // Initialize the mute button's visual state and play a tiny "boot" tone so
+  // users immediately know sounds are on.
+  audio.setMuted(audio.muted);
+  if(!audio.muted){
+    // First gesture is needed to actually start AudioContext, so don't try to
+    // play here — the next real click handles it.
+  }
   $('#btnReset').onclick = ()=>{
     if(!confirm('Clear all clips?')) return;
     state.clips = []; state.pausedMs=0; pause(); renderClips(); computeTotal(); render(0);
