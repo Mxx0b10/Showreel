@@ -98,7 +98,8 @@
   .clip.drag{opacity:.4}
   .clip .thumb{width:50px;height:32px;border-radius:4px;object-fit:cover;background:#000}
   .clip .meta{flex:1;min-width:0}
-  .clip .meta .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .clip .meta .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+  .clip .meta .nm .demoBadge{font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--muted);background:#23232b;border:1px solid var(--line);padding:1px 5px;border-radius:4px;flex-shrink:0;text-transform:uppercase}
   .clip .meta .sm{font-size:10px;color:var(--muted)}
   .clip .x{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px}
   .clip .x:hover{color:var(--err)}
@@ -1857,7 +1858,7 @@ function renderClips(){
     row.innerHTML = `
       <img class="thumb" src="${c.thumb}" />
       <div class="meta">
-        <div class="nm">${c.name}</div>
+        <div class="nm">${c.isDemo ? '<span class="demoBadge">Sample</span>' : ''}<span>${c.name}</span></div>
         <div class="sm">${c.type} · ${c.w}×${c.h}</div>
       </div>
       <button class="x" title="Remove">×</button>
@@ -1883,6 +1884,11 @@ function renderClips(){
 
 /* ----------------------------- file ingest ----------------------------- */
 async function ingestFiles(fileList){
+  // Remove any demo "inspiration" clips when the user adds their own.
+  if(state.clips.some(c => c.isDemo)){
+    state.clips = state.clips.filter(c => !c.isDemo);
+    renderClips();
+  }
   setStatus('Loading designs…');
   for(const f of fileList){
     try{
@@ -1918,6 +1924,237 @@ function captureThumb(src, w, h){
     c.getContext('2d').drawImage(src,0,0,c.width,c.height);
     res(c.toDataURL('image/jpeg',0.7));
   });
+}
+
+/* ----------------------------- demo / inspiration clips -----------------------------
+   Six self-contained "design" mockups rendered to canvas so the app shows
+   working content on first load. They get cleared automatically the moment
+   the user uploads their own files. */
+const DEMO_W = 1600, DEMO_H = 900;
+
+// Tiny drawing helpers used by the demos below.
+function _grad(x, w, h, a, b, vertical=true){
+  const g = vertical
+    ? x.createLinearGradient(0, 0, 0, h)
+    : x.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0, a); g.addColorStop(1, b);
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+}
+function _glow(x, cx, cy, r, color, alpha){
+  const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, color.replace(')', `, ${alpha})`).replace('rgb', 'rgba'));
+  g.addColorStop(1, color.replace(')', ', 0)').replace('rgb', 'rgba'));
+  x.fillStyle = g; x.fillRect(0, 0, x.canvas.width, x.canvas.height);
+}
+function _text(x, text, cx, cy, size, color, family, weight=500, align='center'){
+  x.fillStyle = color;
+  x.textAlign = align;
+  x.textBaseline = 'alphabetic';
+  const f = family === 'serif'
+    ? `${weight} ${size}px Georgia, "Times New Roman", serif`
+    : `${weight} ${size}px -apple-system, "Inter", "Segoe UI", sans-serif`;
+  x.font = f;
+  x.fillText(text, cx, cy);
+}
+function _roundRect(x, rx, ry, rw, rh, r){
+  x.beginPath();
+  x.moveTo(rx+r, ry);
+  x.arcTo(rx+rw, ry, rx+rw, ry+rh, r);
+  x.arcTo(rx+rw, ry+rh, rx, ry+rh, r);
+  x.arcTo(rx, ry+rh, rx, ry, r);
+  x.arcTo(rx, ry, rx+rw, ry, r);
+  x.closePath();
+}
+function _chip(x, cx, cy, label, fg, bg){
+  x.font = `500 ${DEMO_W*0.013}px -apple-system, "Inter", sans-serif`;
+  const pad = DEMO_W*0.012;
+  const tw = x.measureText(label).width;
+  const cw = tw + pad*2, ch = DEMO_W*0.032;
+  _roundRect(x, cx - cw/2, cy - ch/2, cw, ch, ch/2);
+  x.fillStyle = bg; x.fill();
+  _text(x, label, cx, cy + ch*0.12, DEMO_W*0.013, fg, 'sans', 500);
+}
+
+const DEMO_DESIGNS = [
+  // 1. Aurora — Brand identity
+  {
+    name: 'Aurora — Brand identity',
+    draw(x, w, h){
+      _grad(x, w, h, '#0c1133', '#341962', true);
+      _glow(x, w*0.72, h*0.28, w*0.55, 'rgb(124,92,255)', 0.40);
+      _glow(x, w*0.22, h*0.88, w*0.50, 'rgb(34,211,238)', 0.22);
+      _text(x, 'Aurora', w/2, h*0.46, w*0.090, '#ffffff', 'serif', 700);
+      _text(x, 'Brand identity · 2026', w/2, h*0.55, w*0.020, 'rgba(255,255,255,0.65)', 'sans', 400);
+      x.strokeStyle = '#a8b7ff'; x.lineWidth = w*0.0024;
+      x.beginPath(); x.moveTo(w*0.43, h*0.62); x.lineTo(w*0.57, h*0.62); x.stroke();
+      _text(x, 'STUDIO  ·  EST. 2024', w/2, h*0.92, w*0.013, 'rgba(255,255,255,0.45)', 'sans', 500);
+    }
+  },
+  // 2. Pulse — Dashboard mock
+  {
+    name: 'Pulse — Dashboard',
+    draw(x, w, h){
+      x.fillStyle = '#0e0e12'; x.fillRect(0,0,w,h);
+      // top bar
+      x.fillStyle = '#15151c'; x.fillRect(0, 0, w, h*0.085);
+      x.fillStyle = '#7c5cff'; x.beginPath(); x.arc(w*0.035, h*0.043, w*0.011, 0, Math.PI*2); x.fill();
+      _text(x, 'Pulse', w*0.058, h*0.052, w*0.020, '#fff', 'sans', 600, 'left');
+      ['Overview','Reports','Settings'].forEach((t,i)=>{
+        _text(x, t, w*(0.18+i*0.07), h*0.052, w*0.014, i===0?'#fff':'#7a7a82', 'sans', 500, 'left');
+      });
+      _text(x, 'Weekly report', w*0.04, h*0.17, w*0.040, '#fff', 'sans', 700, 'left');
+      _text(x, 'May 14 – May 20', w*0.04, h*0.22, w*0.017, '#8a8a92', 'sans', 400, 'left');
+      const cards = [
+        { l:'24,182', s:'Active users', d:'+12.4%' },
+        { l:'$48.3k', s:'Revenue',      d:'+3.1%'  },
+        { l:'94.2%',  s:'Retention',    d:'+0.6%'  },
+      ];
+      cards.forEach((c, i) => {
+        const cx = w*0.04 + i*w*0.315, cy = h*0.29, cw = w*0.285, ch = h*0.19;
+        _roundRect(x, cx, cy, cw, ch, w*0.010); x.fillStyle = '#15151c'; x.fill();
+        _text(x, c.s, cx + cw*0.06, cy + ch*0.24, w*0.015, '#8a8a92', 'sans', 500, 'left');
+        _text(x, c.l, cx + cw*0.06, cy + ch*0.66, w*0.038, '#fff', 'sans', 700, 'left');
+        _text(x, c.d, cx + cw*0.06, cy + ch*0.88, w*0.014, '#22c55e', 'sans', 500, 'left');
+      });
+      const gx = w*0.04, gy = h*0.54, gw = w*0.92, gh = h*0.38;
+      _roundRect(x, gx, gy, gw, gh, w*0.010); x.fillStyle = '#15151c'; x.fill();
+      _text(x, 'Sessions', gx + gw*0.025, gy + gh*0.12, w*0.018, '#8a8a92', 'sans', 500, 'left');
+      const pts = [.18,.32,.24,.46,.40,.55,.50,.66,.72,.85];
+      x.beginPath();
+      pts.forEach((p, i) => {
+        const px = gx + gw*0.04 + (i/(pts.length-1))*gw*0.92;
+        const py = gy + gh*0.92 - p*gh*0.62;
+        i===0 ? x.moveTo(px, py) : x.lineTo(px, py);
+      });
+      x.lineTo(gx + gw*0.96, gy + gh*0.92);
+      x.lineTo(gx + gw*0.04, gy + gh*0.92);
+      x.closePath();
+      const fg = x.createLinearGradient(0, gy, 0, gy+gh);
+      fg.addColorStop(0, 'rgba(124,92,255,0.55)');
+      fg.addColorStop(1, 'rgba(124,92,255,0)');
+      x.fillStyle = fg; x.fill();
+      x.beginPath();
+      pts.forEach((p, i) => {
+        const px = gx + gw*0.04 + (i/(pts.length-1))*gw*0.92;
+        const py = gy + gh*0.92 - p*gh*0.62;
+        i===0 ? x.moveTo(px, py) : x.lineTo(px, py);
+      });
+      x.strokeStyle = '#a890ff'; x.lineWidth = w*0.0030; x.stroke();
+    }
+  },
+  // 3. Bloom — Poster
+  {
+    name: 'Bloom — Poster',
+    draw(x, w, h){
+      _grad(x, w, h, '#ff9c6b', '#ff5fa3');
+      // floating circles
+      [[ .15,.25,.18,'#fff7e8',0.22],
+       [ .82,.20,.10,'#ffd6a8',0.30],
+       [ .78,.78,.22,'#ffe8c4',0.18],
+       [ .20,.80,.08,'#fff',   0.25]].forEach(([cx,cy,r,c,a])=>{
+        x.fillStyle = c; x.globalAlpha = a;
+        x.beginPath(); x.arc(w*cx, h*cy, w*r, 0, Math.PI*2); x.fill();
+      });
+      x.globalAlpha = 1;
+      _text(x, 'Bloom.', w/2, h*0.52, w*0.16, '#ffffff', 'sans', 800);
+      _text(x, 'Spring collection · 2026', w/2, h*0.66, w*0.022, 'rgba(255,255,255,0.85)', 'sans', 500);
+      _chip(x, w/2, h*0.78, 'Available now', '#ff5fa3', '#ffffff');
+    }
+  },
+  // 4. Atlas — Editorial
+  {
+    name: 'Atlas — Editorial',
+    draw(x, w, h){
+      x.fillStyle = '#f4ede3'; x.fillRect(0,0,w,h);
+      _text(x, 'ATLAS', w*0.04, h*0.13, w*0.018, '#9a8c6b', 'sans', 600, 'left');
+      _text(x, 'Issue 04', w*0.96, h*0.13, w*0.018, '#9a8c6b', 'sans', 500, 'right');
+      x.fillStyle = '#1a1410';
+      x.font = `700 ${w*0.075}px Georgia, serif`;
+      x.textAlign = 'left';
+      x.fillText('On building', w*0.04, h*0.36);
+      x.fillText('quiet tools.', w*0.04, h*0.48);
+      // two column lines
+      for(let col=0; col<2; col++){
+        const cx0 = w*0.04 + col*(w*0.46);
+        for(let i=0;i<7;i++){
+          const ly = h*0.60 + i*h*0.045;
+          x.fillStyle = '#3a2e22';
+          x.fillRect(cx0, ly, w*0.42 * (i===6?0.6:1), h*0.012);
+        }
+      }
+      x.strokeStyle = '#1a1410'; x.lineWidth = w*0.0015;
+      x.beginPath(); x.moveTo(w*0.04, h*0.93); x.lineTo(w*0.96, h*0.93); x.stroke();
+      _text(x, 'EDITORIAL  ·  PAGE 12', w/2, h*0.97, w*0.012, '#9a8c6b', 'sans', 500);
+    }
+  },
+  // 5. Volt — Mobile app mock
+  {
+    name: 'Volt — Mobile app',
+    draw(x, w, h){
+      _grad(x, w, h, '#1c2bff', '#22d3ee', false);
+      _glow(x, w*0.20, h*0.20, w*0.45, 'rgb(255,255,255)', 0.18);
+      _text(x, 'Volt', w*0.08, h*0.18, w*0.060, '#fff', 'sans', 800, 'left');
+      _text(x, 'Instant rewards,', w*0.08, h*0.36, w*0.030, 'rgba(255,255,255,0.92)', 'sans', 500, 'left');
+      _text(x, 'every tap.',       w*0.08, h*0.42, w*0.030, 'rgba(255,255,255,0.92)', 'sans', 500, 'left');
+      _chip(x, w*0.08 + w*0.07, h*0.55, 'Download free', '#1c2bff', '#fff');
+      // Phone mockup right side
+      const phW = w*0.22, phH = phW*2.05;
+      const phX = w*0.66, phY = (h - phH)/2;
+      _roundRect(x, phX, phY, phW, phH, phW*0.10);
+      x.fillStyle = '#0e1029'; x.fill();
+      _roundRect(x, phX + phW*0.04, phY + phW*0.04, phW*0.92, phH - phW*0.08, phW*0.07);
+      x.fillStyle = '#0a0f24'; x.fill();
+      // app content
+      _text(x, '⚡ 12,480 pts', phX + phW*0.10, phY + phW*0.30, phW*0.10, '#fff', 'sans', 700, 'left');
+      ['Energy boost · 1200','Coffee · 300','Movie ticket · 800'].forEach((t, i) => {
+        _roundRect(x, phX + phW*0.08, phY + phW*0.50 + i*phW*0.32, phW*0.84, phW*0.26, phW*0.04);
+        x.fillStyle = 'rgba(255,255,255,0.06)'; x.fill();
+        _text(x, t, phX + phW*0.16, phY + phW*0.50 + i*phW*0.32 + phW*0.17, phW*0.06, '#fff', 'sans', 500, 'left');
+      });
+    }
+  },
+  // 6. Mono — Type
+  {
+    name: 'Mono — Type',
+    draw(x, w, h){
+      x.fillStyle = '#0a0a0b'; x.fillRect(0,0,w,h);
+      // huge wordmark
+      x.fillStyle = '#f5f5f0';
+      x.textAlign = 'center';
+      x.font = `900 ${w*0.32}px -apple-system, "Inter", "Helvetica Neue", sans-serif`;
+      x.fillText('MONO', w/2, h*0.58);
+      // single accent line
+      x.strokeStyle = '#f5f5f0'; x.lineWidth = w*0.0015;
+      x.beginPath(); x.moveTo(w*0.20, h*0.75); x.lineTo(w*0.80, h*0.75); x.stroke();
+      _text(x, 'Type explorations — 04 weights, 1 family', w/2, h*0.82, w*0.018, 'rgba(245,245,240,0.72)', 'sans', 500);
+      _text(x, '01 / 06', w*0.04, h*0.13, w*0.014, 'rgba(245,245,240,0.55)', 'sans', 500, 'left');
+      _text(x, 'STUDIO MONO', w*0.96, h*0.13, w*0.014, 'rgba(245,245,240,0.55)', 'sans', 500, 'right');
+    }
+  },
+];
+
+async function loadDemoClips(){
+  for(const d of DEMO_DESIGNS){
+    const c = document.createElement('canvas');
+    c.width = DEMO_W; c.height = DEMO_H;
+    const x = c.getContext('2d');
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    d.draw(x, DEMO_W, DEMO_H);
+    const thumb = await captureThumb(c, DEMO_W, DEMO_H);
+    state.clips.push({
+      id: uuid(),
+      name: d.name,
+      type: 'image',
+      el: c,
+      w: DEMO_W, h: DEMO_H,
+      thumb,
+      isDemo: true,
+    });
+  }
+  rebuildScaledCache();
+  renderClips();
+  computeTotal();
+  render(state.pausedMs);
 }
 
 /* ----------------------------- export ----------------------------- */
@@ -2085,6 +2322,10 @@ renderEffects();
 computeTotal();
 render(0);
 wire();
+
+// Inspiration: render and queue up 6 demo "designs" so the canvas isn't empty
+// on first load. They auto-clear the moment the user drops their own files.
+loadDemoClips();
 
 /* ----------------------------- PWA: service worker ----------------------------- */
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
