@@ -176,7 +176,7 @@
         <input id="file" type="file" accept="image/*,video/*" multiple hidden />
       </label>
       <div class="clips" id="clips"></div>
-      <div class="hint">Drag to reorder · <span class="kbd">Space</span> play · <span class="kbd">R</span> restart</div>
+      <div class="hint">Drag to reorder · <span class="kbd">⌘V</span> paste image · <span class="kbd">⌘C</span> copy frame · <span class="kbd">Space</span> play · <span class="kbd">R</span> restart</div>
     </div>
   </aside>
 
@@ -2320,6 +2320,48 @@ function wire(){
     if(e.target.matches('input,textarea')) return;
     if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
     if(e.key==='r' || e.key==='R'){ restart(); }
+  });
+
+  // Paste images/videos from clipboard (Cmd/Ctrl+V from anywhere — screenshot,
+  // browser, Finder) — they get ingested like a regular file drop.
+  document.addEventListener('paste', async (e) => {
+    if(e.target.matches('input,textarea')) return;
+    const items = e.clipboardData && e.clipboardData.items;
+    if(!items || !items.length) return;
+    const files = [];
+    for(const item of items){
+      if(item.kind === 'file' && /^(image|video)\//.test(item.type)){
+        const f = item.getAsFile();
+        if(f) files.push(f);
+      }
+    }
+    if(!files.length) return;
+    e.preventDefault();
+    setStatus(`Pasting ${files.length} item${files.length>1?'s':''}…`);
+    await ingestFiles(files);
+    audio.play('pop');
+  });
+
+  // Cmd/Ctrl+C copies the current canvas frame to the clipboard as PNG, so
+  // users can paste it into other apps.
+  document.addEventListener('copy', async (e) => {
+    if(e.target.matches('input,textarea')) return;
+    const sel = window.getSelection();
+    if(sel && sel.toString().length > 0) return;
+    if(!navigator.clipboard || !window.ClipboardItem) return;
+    try {
+      const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+      if(!blob) return;
+      e.preventDefault();
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      setStatus('Frame copied to clipboard');
+      audio.play('click');
+      setTimeout(() => setStatus('', false), 1200);
+    } catch(err){
+      console.warn('Copy failed:', err);
+      setStatus('Copy failed — canvas may be tainted by a non-CORS image');
+      setTimeout(() => setStatus('', false), 1800);
+    }
   });
 }
 
