@@ -111,6 +111,7 @@
   .toggle{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:2px;gap:2px}
   .toggle button{flex:1;background:transparent;border:0;color:var(--muted);padding:5px 6px;border-radius:4px;cursor:pointer;font-size:11px}
   .toggle button.sel{background:var(--line-2);color:var(--text)}
+  .toggle button[disabled]{opacity:.35;cursor:not-allowed}
   .status{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--panel);border:1px solid var(--line);padding:10px 14px;border-radius:8px;display:none;align-items:center;gap:10px;font-size:12px}
   .status.show{display:flex}
   .inspireBtn{position:fixed;left:20px;bottom:20px;z-index:50;display:inline-flex;align-items:center;gap:8px;background:var(--text);color:#0f0f10;border:1px solid var(--text);border-radius:999px;padding:9px 16px 9px 12px;font:600 12px/1 -apple-system,"Inter",sans-serif;letter-spacing:.01em;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.04) inset;transition:transform .15s ease, box-shadow .15s ease}
@@ -303,12 +304,44 @@
         <label>Loop preview</label>
         <input id="loop" type="checkbox" checked />
       </div>
-      <details>
-        <summary>Export options</summary>
-        <div class="row" style="margin-top:6px"><label>FPS</label><input id="fps" type="number" min="24" max="60" step="1" value="60" /></div>
+    </div>
+
+    <div class="group">
+      <h3>Export</h3>
+      <div class="row">
+        <label>File type</label>
+        <div class="toggle" id="exportFmt">
+          <button data-v="webm" class="sel">WebM</button>
+          <button data-v="mp4">MP4</button>
+          <button data-v="gif">GIF</button>
+        </div>
+      </div>
+      <div id="videoOpts">
+        <div class="row"><label>FPS</label><input id="fps" type="number" min="24" max="60" step="1" value="60" /></div>
         <div class="row"><label>Bitrate</label><div class="field"><input id="br" type="number" min="2" max="80" step="1" value="20" /><span class="unit">Mbps</span></div></div>
-        <div class="hint">Exports at the canvas resolution above. Bitrate auto-scales with quality — 4K wants 40–60 Mbps for clean detail.</div>
-      </details>
+        <div class="hint">Video exports at the canvas resolution above. Bitrate auto-scales with quality — 4K wants 40–60 Mbps for clean detail.</div>
+      </div>
+      <div id="gifOpts" hidden>
+        <div class="row">
+          <label>Width</label>
+          <div class="toggle" id="gifWidth">
+            <button data-v="480">480</button>
+            <button data-v="640" class="sel">640</button>
+            <button data-v="800">800</button>
+            <button data-v="1080">1080</button>
+          </div>
+        </div>
+        <div class="row">
+          <label>FPS</label>
+          <div class="toggle" id="gifFps">
+            <button data-v="10">10</button>
+            <button data-v="15" class="sel">15</button>
+            <button data-v="20">20</button>
+            <button data-v="25">25</button>
+          </div>
+        </div>
+        <div class="hint">GIFs are 256 colors per frame and get large fast — keep width and FPS modest. Loops forever when Loop preview is on.</div>
+      </div>
     </div>
   </aside>
 </div>
@@ -344,6 +377,10 @@ const state = {
   loop: true,
   fps: 60,
   br: 20,
+  exportFmt: 'webm',
+  gifWidth: 640,
+  gifFps: 15,
+  exporting: false,
   playing: false,
   t0: 0,
   pausedMs: 0,
@@ -2157,8 +2194,64 @@ async function loadDemoClips(count = 6){
 }
 
 /* ----------------------------- export ----------------------------- */
-async function exportWebM(){
+const VIDEO_MIMES = {
+  webm: ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'],
+  mp4:  ['video/mp4;codecs=avc1.640028', 'video/mp4;codecs=avc1.42E01E', 'video/mp4'],
+};
+function pickVideoMime(fmt){
+  if(typeof MediaRecorder === 'undefined') return null;
+  return VIDEO_MIMES[fmt].find(m => MediaRecorder.isTypeSupported(m)) || null;
+}
+
+/* Saving: inside a claude.ai artifact the page can't trigger downloads itself,
+   so hand the file to the viewer's `downloads` capability when it exists;
+   everywhere else fall back to a plain <a download>. */
+const downloadsCap = (window.claude && typeof window.claude.use === 'function')
+  ? window.claude.use('downloads').catch(() => null)
+  : Promise.resolve(null);
+async function saveBlob(blob, filename){
+  const dl = await downloadsCap;
+  if(dl){
+    try{ await dl.save({filename, data: blob}); return true; }
+    catch(e){
+      if(e && e.code === 'declined') return false;
+      if(e && e.code === 'too_large'){ alert('That file is too large to save here — try a smaller size or shorter reel.'); return false; }
+      if(e && e.code === 'rate_limited'){ alert('A save prompt is already open.'); return false; }
+      // Anything else: fall through to a plain download.
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+  return true;
+}
+function exportFilename(ext){
+  return `showreel-${state.aspect.replace(':','x')}-${Date.now()}.${ext}`;
+}
+
+async function exportReel(){
+  if(state.exporting) return;
   if(state.clips.length===0){ alert('Add some designs first.'); return; }
+  state.exporting = true;
+  $('#btnExport').disabled = true;
+  try{
+    if(state.exportFmt === 'gif') await exportGIF();
+    else await exportVideo(state.exportFmt);
+  }catch(e){
+    console.error('Export failed:', e);
+    setStatus('', false);
+    alert('Export failed: ' + (e && e.message || e));
+  }finally{
+    state.exporting = false;
+    $('#btnExport').disabled = false;
+  }
+}
+
+async function exportVideo(fmt){
+  const mime = pickVideoMime(fmt);
+  if(!mime){ alert(`${fmt.toUpperCase()} recording isn't supported in this browser.`); return; }
   pause();
   computeTotal();
   const fps = clamp(parseInt($('#fps').value)||60,24,60);
@@ -2166,9 +2259,6 @@ async function exportWebM(){
   setStatus('Exporting…');
 
   const stream = cv.captureStream(fps);
-  let mime = 'video/webm;codecs=vp9';
-  if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm;codecs=vp8';
-  if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm';
   const rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond: br*1_000_000});
   const chunks = [];
   rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
@@ -2186,13 +2276,183 @@ async function exportWebM(){
   }
   rec.stop();
   await done;
-  const blob = new Blob(chunks, {type: mime});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `showreel-${state.aspect.replace(':','x')}-${Date.now()}.webm`;
-  document.body.appendChild(a); a.click(); a.remove();
+  const blob = new Blob(chunks, {type: mime.split(';')[0]});
   setStatus('', false);
-  audio.play('success');
+  if(await saveBlob(blob, exportFilename(fmt))) audio.play('success');
+}
+
+/* GIF export: renders each frame offline (no real-time wait), downscales to
+   the chosen width, quantizes to 256 colors per frame and LZW-encodes it. */
+async function exportGIF(){
+  pause();
+  computeTotal();
+  const fps = state.gifFps;
+  const W = Math.min(state.gifWidth, cv.width);
+  const H = Math.max(1, Math.round(W * cv.height / cv.width));
+  const small = document.createElement('canvas');
+  small.width = W; small.height = H;
+  const sctx = small.getContext('2d', {willReadFrequently:true});
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+
+  const totalMs = state.totalMs;
+  const frameCount = Math.max(1, Math.round(totalMs / 1000 * fps));
+  const gif = new GifWriter(W, H, state.loop);
+  setStatus('Exporting GIF… 0%');
+  for(let i=0; i<frameCount; i++){
+    render(i * 1000 / fps);
+    sctx.drawImage(cv, 0, 0, W, H);
+    const {data} = sctx.getImageData(0, 0, W, H);
+    // Centisecond delays, accumulated so rounding doesn't drift the timing.
+    const delay = Math.round((i+1)*100/fps) - Math.round(i*100/fps);
+    gif.addFrame(data, delay);
+    setStatus(`Exporting GIF… ${Math.round((i+1)/frameCount*100)}%`);
+    await new Promise(r => setTimeout(r, 0)); // keep the UI responsive
+  }
+  render(state.pausedMs);
+  const blob = new Blob([gif.finish()], {type:'image/gif'});
+  setStatus('', false);
+  if(await saveBlob(blob, exportFilename('gif'))) audio.play('success');
+}
+
+/* Minimal GIF89a encoder: per-frame 256-color palette via median cut over a
+   15-bit color histogram, variable-width LZW. */
+class GifWriter {
+  constructor(w, h, loop){
+    this.w = w; this.h = h;
+    this.buf = new Uint8Array(1 << 20); this.len = 0;
+    this.lut = new Uint8Array(32768);
+    this.hist = new Uint32Array(32768);
+    this.idx = new Uint8Array(w*h);
+    this.bytes([0x47,0x49,0x46,0x38,0x39,0x61]); // "GIF89a"
+    this.u16(w); this.u16(h);
+    this.bytes([0x00, 0x00, 0x00]); // no global color table
+    if(loop){
+      // NETSCAPE2.0 application extension: loop forever.
+      this.bytes([0x21,0xFF,0x0B, 0x4E,0x45,0x54,0x53,0x43,0x41,0x50,0x45,0x32,0x2E,0x30, 0x03,0x01,0x00,0x00,0x00]);
+    }
+  }
+  ensure(n){
+    if(this.len + n <= this.buf.length) return;
+    let cap = this.buf.length * 2; while(cap < this.len + n) cap *= 2;
+    const nb = new Uint8Array(cap); nb.set(this.buf.subarray(0, this.len)); this.buf = nb;
+  }
+  byte(b){ this.ensure(1); this.buf[this.len++] = b; }
+  bytes(arr){ this.ensure(arr.length); this.buf.set(arr, this.len); this.len += arr.length; }
+  u16(v){ this.byte(v & 0xFF); this.byte((v >> 8) & 0xFF); }
+
+  addFrame(rgba, delayCs){
+    const palette = this.quantize(rgba);
+    // Graphic control extension: no disposal, delay, no transparency.
+    this.bytes([0x21,0xF9,0x04, 0x04]); this.u16(delayCs); this.bytes([0x00, 0x00]);
+    // Image descriptor with a 256-entry local color table.
+    this.byte(0x2C); this.u16(0); this.u16(0); this.u16(this.w); this.u16(this.h); this.byte(0x87);
+    this.bytes(palette);
+    this.lzw(this.idx, 8);
+  }
+
+  quantize(rgba){
+    const hist = this.hist, lut = this.lut, idx = this.idx;
+    hist.fill(0);
+    const n = idx.length;
+    for(let i=0, p=0; i<n; i++, p+=4){
+      hist[((rgba[p] >> 3) << 10) | ((rgba[p+1] >> 3) << 5) | (rgba[p+2] >> 3)]++;
+    }
+    const bins = [];
+    for(let c=0; c<32768; c++) if(hist[c]) bins.push(c);
+    const ch = (c, k) => k===0 ? c >> 10 : k===1 ? (c >> 5) & 31 : c & 31;
+    const makeBox = (list) => {
+      let lo=[31,31,31], hi=[0,0,0], count=0;
+      for(const c of list){
+        for(let k=0;k<3;k++){ const v=ch(c,k); if(v<lo[k]) lo[k]=v; if(v>hi[k]) hi[k]=v; }
+        count += hist[c];
+      }
+      return {list, lo, hi, count};
+    };
+    const boxes = [makeBox(bins)];
+    while(boxes.length < 256){
+      // Split the box with the widest channel range, weighted by pixel count.
+      let best = -1, bestScore = 0;
+      for(let b=0;b<boxes.length;b++){
+        const bx = boxes[b];
+        if(bx.list.length < 2) continue;
+        const range = Math.max(bx.hi[0]-bx.lo[0], bx.hi[1]-bx.lo[1], bx.hi[2]-bx.lo[2]);
+        const score = range * Math.sqrt(bx.count);
+        if(score > bestScore){ bestScore = score; best = b; }
+      }
+      if(best < 0) break;
+      const bx = boxes[best];
+      const r = [bx.hi[0]-bx.lo[0], bx.hi[1]-bx.lo[1], bx.hi[2]-bx.lo[2]];
+      const k = r[0]>=r[1] && r[0]>=r[2] ? 0 : r[1]>=r[2] ? 1 : 2;
+      bx.list.sort((a,b) => ch(a,k) - ch(b,k));
+      let acc = 0, cut = 1;
+      for(let i=0;i<bx.list.length-1;i++){
+        acc += hist[bx.list[i]];
+        if(acc >= bx.count/2){ cut = i+1; break; }
+        cut = i+1;
+      }
+      boxes.splice(best, 1, makeBox(bx.list.slice(0, cut)), makeBox(bx.list.slice(cut)));
+    }
+    const pal = new Uint8Array(768);
+    boxes.forEach((bx, i) => {
+      let r=0, g=0, b=0;
+      for(const c of bx.list){ const w=hist[c]; r+=(c>>10)*w; g+=((c>>5)&31)*w; b+=(c&31)*w; lut[c]=i; }
+      const t = bx.count || 1;
+      // Expand 5-bit channel averages back to 8 bits.
+      pal[i*3]   = Math.round(r/t * 255/31);
+      pal[i*3+1] = Math.round(g/t * 255/31);
+      pal[i*3+2] = Math.round(b/t * 255/31);
+    });
+    for(let i=0, p=0; i<n; i++, p+=4){
+      idx[i] = lut[((rgba[p] >> 3) << 10) | ((rgba[p+1] >> 3) << 5) | (rgba[p+2] >> 3)];
+    }
+    return pal;
+  }
+
+  lzw(indices, minCodeSize){
+    this.byte(minCodeSize);
+    const clearCode = 1 << minCodeSize, eoiCode = clearCode + 1;
+    let codeSize = minCodeSize + 1, nextCode = eoiCode + 1;
+    let table = new Map();
+    // Sub-block packing: up to 255 bytes per block, each prefixed by its length.
+    const block = new Uint8Array(255); let blen = 0;
+    let acc = 0, nbits = 0;
+    const flushBlock = () => { if(blen){ this.byte(blen); this.bytes(block.subarray(0, blen)); blen = 0; } };
+    const emit = (code) => {
+      acc |= code << nbits; nbits += codeSize;
+      while(nbits >= 8){
+        block[blen++] = acc & 0xFF; acc >>>= 8; nbits -= 8;
+        if(blen === 255) flushBlock();
+      }
+    };
+    emit(clearCode);
+    let prefix = indices[0];
+    for(let i=1; i<indices.length; i++){
+      const k = indices[i];
+      const key = (prefix << 8) | k;
+      const hit = table.get(key);
+      if(hit !== undefined){ prefix = hit; continue; }
+      emit(prefix);
+      if(nextCode === 4096){
+        emit(clearCode);
+        table = new Map(); nextCode = eoiCode + 1; codeSize = minCodeSize + 1;
+      } else {
+        if(nextCode >= (1 << codeSize)) codeSize++;
+        table.set(key, nextCode++);
+      }
+      prefix = k;
+    }
+    emit(prefix);
+    emit(eoiCode);
+    if(nbits > 0){ block[blen++] = acc & 0xFF; if(blen === 255) flushBlock(); }
+    flushBlock();
+    this.byte(0x00); // block terminator
+  }
+
+  finish(){
+    this.byte(0x3B); // trailer
+    return this.buf.slice(0, this.len);
+  }
 }
 
 /* ----------------------------- wiring ----------------------------- */
@@ -2212,7 +2472,7 @@ function wire(){
 
   $('#btnPlay').onclick = togglePlay;
   $('#btnPlay2').onclick = togglePlay;
-  $('#btnExport').onclick = exportWebM;
+  $('#btnExport').onclick = exportReel;
   $('#inspireBtn').onclick = inspireMe;
   $('#btnSound').onclick = () => { audio.setMuted(!audio.muted); };
   // Initialize the mute button's visual state and play a tiny "boot" tone so
@@ -2269,6 +2529,37 @@ function wire(){
     e.target.value = state.presetCycleMs;
     computeTotal(); render(state.pausedMs);
   };
+  // Export file type. MP4 recording depends on the browser's MediaRecorder.
+  const syncExportUI = () => {
+    $$('#exportFmt button').forEach(x => x.classList.toggle('sel', x.dataset.v === state.exportFmt));
+    $('#videoOpts').hidden = state.exportFmt === 'gif';
+    $('#gifOpts').hidden = state.exportFmt !== 'gif';
+    $('#btnExport').textContent = `Export ${state.exportFmt.toUpperCase()}`;
+  };
+  ['webm','mp4'].forEach(fmt => {
+    if(!pickVideoMime(fmt)){
+      const b = $(`#exportFmt button[data-v="${fmt}"]`);
+      b.disabled = true; b.title = `${fmt.toUpperCase()} recording isn't supported in this browser`;
+      if(state.exportFmt === fmt) state.exportFmt = 'gif';
+    }
+  });
+  syncExportUI();
+  $('#exportFmt').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b || b.disabled) return;
+    state.exportFmt = b.dataset.v;
+    syncExportUI();
+  });
+  $('#gifWidth').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#gifWidth button').forEach(x=>x.classList.toggle('sel', x===b));
+    state.gifWidth = parseInt(b.dataset.v) || 640;
+  });
+  $('#gifFps').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#gifFps button').forEach(x=>x.classList.toggle('sel', x===b));
+    state.gifFps = parseInt(b.dataset.v) || 15;
+  });
+
   $('#speed').addEventListener('click', e=>{
     const b = e.target.closest('button'); if(!b) return;
     $$('#speed button').forEach(x=>x.classList.remove('sel'));
