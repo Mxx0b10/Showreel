@@ -343,7 +343,7 @@
           <span class="sc-ic"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3.2l2 1.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
           <span class="sc-val" id="durVal"></span>
           <span class="sc-unit" id="durUnit"></span>
-          <input id="dur" type="range" min="500" max="10000" step="100" aria-label="Duration" />
+          <input id="dur" type="range" min="0" max="1000" step="1" aria-label="Duration" />
         </div>
       </div>
       <div class="prop">
@@ -352,7 +352,7 @@
           <span class="sc-ic"><svg viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="6.5" y="6.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 1.6"/></svg></span>
           <span class="sc-val" id="transVal"></span>
           <span class="sc-unit" id="transUnit"></span>
-          <input id="trans" type="range" min="0" max="3000" step="50" aria-label="Transition" />
+          <input id="trans" type="range" min="0" max="1000" step="1" aria-label="Transition" />
         </div>
       </div>
       <div class="prop">
@@ -1999,23 +1999,33 @@ const GifEncoder = (function(){
 
 /* ----------------------------- wiring ----------------------------- */
 /* ----------------------------- controls ----------------------------- */
+// `curve` sliders map a 0–1000 track onto [min,max] quadratically, so the
+// short end (fast cuts) gets most of the travel and finer control.
 const SLIDERS = [
-  {id:'dur',     key:'perDurMs',   fmt: v => (v/1000).toFixed(1), unit:'s'},
-  {id:'trans',   key:'transMs',    fmt: v => String(v),           unit:'ms'},
+  {id:'dur',     key:'perDurMs',   curve:{min:50, max:10000, step:10},
+   fmt: v => (v/1000).toFixed(v < 1000 ? 2 : 1), unit:'s'},
+  {id:'trans',   key:'transMs',    curve:{min:0, max:3000, step:10},
+   fmt: v => v >= 1000 ? (v/1000).toFixed(2) : String(v), unit: v => v >= 1000 ? 's' : 'ms'},
   {id:'padding', key:'paddingPct', fmt: v => String(v),           unit:'%'},
   {id:'radius',  key:'radiusPct',  fmt: v => String(v),           unit:'%'},
 ];
+function curveVal(c, pos){
+  const v = c.min + (c.max - c.min) * Math.pow(pos/1000, 2);
+  return clamp(Math.round(v / c.step) * c.step, c.min, c.max);
+}
+function curvePos(c, v){ return Math.round(Math.sqrt(clamp((v - c.min) / (c.max - c.min), 0, 1)) * 1000); }
 function syncSlider(sl){
   const el = $('#'+sl.id);
-  el.value = state[sl.key];
+  const v = state[sl.key];
+  el.value = sl.curve ? curvePos(sl.curve, v) : v;
   const pct = (el.value - el.min) / (el.max - el.min) * 100;
   el.parentElement.style.setProperty('--p', pct + '%');
-  $('#'+sl.id+'Val').textContent = sl.fmt(+el.value);
-  $('#'+sl.id+'Unit').textContent = sl.unit;
+  $('#'+sl.id+'Val').textContent = sl.fmt(v);
+  $('#'+sl.id+'Unit').textContent = typeof sl.unit === 'function' ? sl.unit(v) : sl.unit;
 }
 // A transition can take at most half a clip (one in, one out).
 function clampTransition(){
-  const max = Math.floor(state.perDurMs / 2 / 50) * 50;
+  const max = Math.floor(state.perDurMs / 2 / 10) * 10;
   if(state.transMs > max){ state.transMs = max; syncSlider(SLIDERS[1]); }
 }
 function bindToggle(id, fn){
@@ -2109,7 +2119,7 @@ function wire(){
   SLIDERS.forEach(sl => {
     const el = $('#'+sl.id);
     el.addEventListener('input', () => {
-      state[sl.key] = +el.value;
+      state[sl.key] = sl.curve ? curveVal(sl.curve, +el.value) : +el.value;
       syncSlider(sl);
       if(sl.key === 'perDurMs' || sl.key === 'transMs') clampTransition();
       if(sl.key === 'perDurMs') computeTotal();
