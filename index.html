@@ -4,42 +4,100 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Showreel Studio</title>
-<meta name="description" content="Create showreel videos of your design work with preset animation templates. No login, runs in your browser." />
+<meta name="description" content="Create showreel videos of your design work with layouts and transitions. No login, runs in your browser." />
 <meta name="theme-color" content="#0f0f10" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <!-- Open Graph / share preview -->
 <meta property="og:title" content="Showreel Studio" />
-<meta property="og:description" content="Create showreel videos of your design work with preset animation templates." />
+<meta property="og:description" content="Create showreel videos of your design work with layouts and transitions." />
 <meta property="og:type" content="website" />
 <meta property="og:image" content="icon-512.png" />
+<script>
+  // Theme: 'light' | 'dark' | 'system' (default). Applied before paint.
+  window.applyTheme = function(mode){
+    var mq = matchMedia('(prefers-color-scheme: light)');
+    var t = mode === 'system' ? (mq.matches ? 'light' : 'dark') : mode;
+    document.documentElement.dataset.theme = t;
+    document.documentElement.dataset.themeMode = mode;
+  };
+  (function(){
+    var m; try{ m = localStorage.getItem('showreel-theme'); }catch(e){}
+    applyTheme(m === 'light' || m === 'dark' ? m : 'system');
+    matchMedia('(prefers-color-scheme: light)').addEventListener('change', function(){
+      if(document.documentElement.dataset.themeMode === 'system') applyTheme('system');
+    });
+  })();
+</script>
 <style>
   :root{
     --bg:#0f0f10;
     --panel:#161618;
     --panel-2:#1c1c1f;
+    --hover:#222226;
     --line:#2a2a2e;
     --line-2:#37373d;
     --text:#ececee;
     --muted:#8a8a92;
     --accent:#ececee;
+    --accent-hover:#ffffff;
+    --on-accent:#0f0f10;
+    --stage:#0a0a0b;
+    --thumb-bg:#000;
+    --knob:#ffffff;
+    --scroll:#2a2a2e;
+    --shadow:0 8px 28px rgba(0,0,0,.45);
+    --card:#18181b;
+    --field:#232327;
+    --field-hover:#29292e;
+    --field-fill:#35353c;
+    --chip:#3a3a41;
+    --chip-shadow:0 1px 2px rgba(0,0,0,.4);
     --ok:#22c55e;
     --err:#ef4444;
     --r:10px;
+    color-scheme:dark;
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f6f4;
+    --panel:#ffffff;
+    --panel-2:#f4f4f2;
+    --hover:#ececea;
+    --line:#e6e6e2;
+    --line-2:#d4d4cf;
+    --text:#1a1a1c;
+    --muted:#6b6b72;
+    --accent:#1a1a1c;
+    --accent-hover:#000000;
+    --on-accent:#ffffff;
+    --stage:#ecece9;
+    --thumb-bg:#e4e4e0;
+    --knob:#ffffff;
+    --scroll:#d4d4cf;
+    --shadow:0 8px 24px rgba(20,20,30,.12);
+    --card:#ffffff;
+    --field:#f2f2f0;
+    --field-hover:#ebebe8;
+    --field-fill:#dfdfdb;
+    --chip:#ffffff;
+    --chip-shadow:0 1px 2px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.06);
+    --ok:#16a34a;
+    --err:#dc2626;
+    color-scheme:light;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
   button,input,select{font:inherit;color:inherit}
-  .app{display:grid;grid-template-columns:280px 1fr 280px;grid-template-rows:52px 1fr;height:100vh}
+  .app{display:grid;grid-template-columns:280px 1fr 300px;grid-template-rows:52px 1fr;height:100vh}
   header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel)}
   header .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.2px;font-size:13px}
   header .brand .logo{width:18px;height:18px;flex-shrink:0;display:block}
   header .actions{display:flex;gap:6px}
   .btn{background:transparent;border:1px solid var(--line);color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.12s;font-size:12px}
-  .btn:hover{border-color:var(--line-2);background:var(--panel-2)}
-  .btn.primary{background:var(--text);color:#0f0f10;border-color:var(--text)}
-  .btn.primary:hover{background:#fff}
+  .btn:hover{border-color:var(--line-2);background:var(--hover)}
+  .btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+  .btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
   .btn.ghost{border-color:transparent}
   .btn.ghost:hover{border-color:var(--line)}
   .btn[disabled]{opacity:.4;cursor:not-allowed}
@@ -49,14 +107,12 @@
   .iconBtn.muted .ic{color:var(--muted)}
   .panel{background:var(--panel);overflow:auto}
   .panel.left{border-right:1px solid var(--line);padding:14px}
-  .panel.right{border-left:1px solid var(--line);padding:14px}
+  .panel.right{border-left:1px solid var(--line);padding:6px 16px 20px}
   .panel::-webkit-scrollbar{width:8px;height:8px}
-  .panel::-webkit-scrollbar-thumb{background:#2a2a2e;border-radius:4px}
-  .stage{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:12px;background:#0a0a0b}
+  .panel::-webkit-scrollbar-thumb{background:var(--scroll);border-radius:4px}
+  .stage{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:12px;background:var(--stage)}
   .canvasWrap{position:relative;border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
-  canvas{display:block;background:#000}
-  .playbar{display:flex;align-items:center;gap:10px;width:min(820px,90%);background:var(--panel);padding:8px 12px;border-radius:8px;border:1px solid var(--line)}
-  .playbar input[type=range]{flex:1;accent-color:var(--text);height:4px}
+  canvas{display:block;background:var(--thumb-bg);box-shadow:var(--shadow)}
   .time{font-variant-numeric:tabular-nums;color:var(--muted);min-width:120px;text-align:right;font-size:11px}
   h3{margin:0 0 10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .group{margin-bottom:20px}
@@ -68,31 +124,13 @@
   .row input[type=number]{max-width:90px;text-align:right;font-variant-numeric:tabular-nums}
   .row input:focus{border-color:var(--line-2)}
   .row input[type=checkbox]{accent-color:var(--text)}
-  .modeTabs{margin-bottom:4px}
-  .modeTabs button{padding:7px 8px;font-size:11px;font-weight:600}
-  .presets{display:grid;grid-template-columns:1fr;gap:6px}
-  .preset{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;transition:.12s;overflow:hidden;display:flex;gap:10px;align-items:center}
-  .preset:hover{border-color:var(--line-2)}
-  .preset.sel{border-color:var(--text)}
-  .preset .mini{flex-shrink:0;width:54px;height:36px;border-radius:5px;background:#0a0a0b;position:relative;overflow:hidden;border:1px solid var(--line)}
-  .preset .info{flex:1;min-width:0}
-  .preset .info .name{font-size:12px;font-weight:600}
-  .preset .info .desc{font-size:11px;color:var(--muted);margin-top:1px;line-height:1.3}
-  .templates{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .tpl{position:relative;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;transition:.12s;overflow:hidden}
-  .tpl:hover{border-color:var(--line-2)}
-  .tpl.sel{border-color:var(--text)}
-  .tpl .name{font-size:11px;font-weight:600}
-  .tpl .desc{font-size:10px;color:var(--muted);margin-top:1px;line-height:1.3}
-  .tpl .mini{height:36px;margin-top:6px;border-radius:4px;background:#0a0a0b;position:relative;overflow:hidden;border:1px solid var(--line)}
-  .mini i{position:absolute;background:#3a3a40;border-radius:2px}
   .effects{display:flex;flex-wrap:wrap;gap:4px}
-  .fx{padding:5px 9px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;cursor:pointer;font-size:11px;color:var(--muted);transition:.12s}
+  .fx{padding:5px 9px;background:var(--field);border:1px solid transparent;border-radius:6px;cursor:pointer;font-size:11px;color:var(--muted);transition:.12s}
   .fx:hover{border-color:var(--line-2);color:var(--text)}
-  .fx.sel{background:var(--text);color:#0f0f10;border-color:var(--text)}
+  .fx.sel{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
   .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1.5px dashed var(--line);border-radius:10px;padding:18px 12px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel-2);transition:.12s;min-height:96px}
-  .drop:hover{border-color:var(--line-2);color:var(--text);background:#1f1f23}
-  .drop.drag{border-color:var(--text);color:var(--text);background:#1f1f23}
+  .drop:hover{border-color:var(--line-2);color:var(--text);background:var(--hover)}
+  .drop.drag{border-color:var(--text);color:var(--text);background:var(--hover)}
   .drop .drop-icon{width:24px;height:24px;border-radius:6px;border:1.5px dashed currentColor;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;opacity:.7}
   .drop .drop-title{font-size:12px;font-weight:500;color:var(--text);line-height:1.3}
   .drop .drop-sub{font-size:10px;color:var(--muted);letter-spacing:.02em}
@@ -100,21 +138,35 @@
   .clip{display:flex;gap:8px;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px;cursor:grab}
   .clip:active{cursor:grabbing}
   .clip.drag{opacity:.4}
-  .clip .thumb{width:50px;height:32px;border-radius:4px;object-fit:cover;background:#000}
+  .clip .thumb{width:50px;height:32px;border-radius:4px;object-fit:cover;background:var(--thumb-bg)}
   .clip .meta{flex:1;min-width:0}
   .clip .meta .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-  .clip .meta .nm .demoBadge{font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--muted);background:#23232b;border:1px solid var(--line);padding:1px 5px;border-radius:4px;flex-shrink:0;text-transform:uppercase}
+  .clip .meta .nm .demoBadge{font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--muted);background:var(--hover);border:1px solid var(--line);padding:1px 5px;border-radius:4px;flex-shrink:0;text-transform:uppercase}
   .clip .meta .sm{font-size:10px;color:var(--muted)}
   .clip .x{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px}
   .clip .x:hover{color:var(--err)}
+  .mini-select{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:4px 6px;color:var(--text);outline:none;font-size:11px;cursor:pointer}
+  .hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .hd h3{margin:0}
+  .projs{display:flex;flex-direction:column;gap:4px}
+  .proj{display:flex;gap:8px;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px}
+  .proj .thumb{width:50px;height:32px;border-radius:4px;object-fit:cover;background:var(--thumb-bg);flex-shrink:0}
+  .proj .meta{flex:1;min-width:0}
+  .proj .meta .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .proj .meta .sm{font-size:10px;color:var(--muted)}
+  .proj .acts{display:flex;align-items:center;gap:2px;flex-shrink:0}
+  .proj .open{padding:3px 8px;font-size:11px}
+  .proj .x{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px}
+  .proj .x:hover{color:var(--err)}
   .hint{font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5}
-  .toggle{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:2px;gap:2px}
-  .toggle button{flex:1;background:transparent;border:0;color:var(--muted);padding:5px 6px;border-radius:4px;cursor:pointer;font-size:11px}
-  .toggle button.sel{background:var(--line-2);color:var(--text)}
+  .toggle{display:flex;background:var(--field);border-radius:7px;padding:2px;gap:2px}
+  .toggle button{flex:1;background:transparent;border:0;color:var(--muted);padding:4px 6px;border-radius:5px;cursor:pointer;font-size:11px;transition:color .12s,background .12s}
+  .toggle button:hover{color:var(--text)}
+  .toggle button.sel{background:var(--chip);color:var(--text);box-shadow:var(--chip-shadow)}
   .status{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--panel);border:1px solid var(--line);padding:10px 14px;border-radius:8px;display:none;align-items:center;gap:10px;font-size:12px}
   .status.show{display:flex}
-  .inspireBtn{position:fixed;left:20px;bottom:20px;z-index:50;display:inline-flex;align-items:center;gap:8px;background:var(--text);color:#0f0f10;border:1px solid var(--text);border-radius:999px;padding:9px 16px 9px 12px;font:600 12px/1 -apple-system,"Inter",sans-serif;letter-spacing:.01em;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.04) inset;transition:transform .15s ease, box-shadow .15s ease}
-  .inspireBtn:hover{transform:translateY(-1px);box-shadow:0 10px 36px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06) inset}
+  .inspireBtn{position:fixed;left:20px;bottom:20px;z-index:50;display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:999px;padding:9px 16px 9px 12px;font:600 12px/1 -apple-system,"Inter",sans-serif;letter-spacing:.01em;cursor:pointer;box-shadow:var(--shadow);transition:transform .15s ease, box-shadow .15s ease}
+  .inspireBtn:hover{transform:translateY(-1px)}
   .inspireBtn:active{transform:translateY(0)}
   .inspireBtn .ib-icon{width:16px;height:16px;display:block}
   .inspireBtn.spin .ib-icon{animation:ibSpin 600ms ease-out}
@@ -126,7 +178,64 @@
   details summary{cursor:pointer;color:var(--muted);font-size:11px;outline:none}
   .unit{color:var(--muted);font-size:11px;margin-left:4px}
   .field{display:flex;align-items:center;gap:4px}
-  @media (max-width: 1100px){.app{grid-template-columns:240px 1fr 260px}}
+  /* right panel — inspector cards */
+  .panel.right{background:var(--bg);padding:12px}
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+  .sec h3{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;font-size:12px;letter-spacing:0;text-transform:none;color:var(--text);font-weight:600}
+  .sec h3 .cur{font-weight:500;color:var(--muted);font-size:11px}
+  .prop{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:8px;min-height:28px;margin-top:6px}
+  .prop[hidden]{display:none}
+  .prop > label{color:var(--muted);font-size:12px}
+  .prop-end{display:flex;justify-content:flex-end}
+  .prop .toggle button{padding:5px 4px;white-space:nowrap}
+  /* scrub field: a filled bar you drag, value inside */
+  .scrub{position:relative;height:28px;border-radius:7px;background:var(--field);overflow:hidden;display:flex;align-items:center;gap:7px;padding:0 9px;font-size:12px;font-variant-numeric:tabular-nums;transition:background .12s}
+  .scrub::before{content:"";position:absolute;inset:0 auto 0 0;width:var(--p,0%);background:var(--field-fill)}
+  .scrub::after{content:"";position:absolute;top:6px;bottom:6px;left:calc(var(--p,0%) - 1px);width:2px;border-radius:2px;background:var(--text);opacity:0;transition:opacity .12s}
+  .scrub:hover{background:var(--field-hover)}
+  .scrub:hover::after,.scrub:focus-within::after{opacity:.55}
+  .scrub:focus-within{box-shadow:0 0 0 1.5px var(--line-2)}
+  .scrub > span{position:relative;z-index:1;pointer-events:none}
+  .sc-ic{display:flex;color:var(--muted)}
+  .sc-ic svg{width:14px;height:14px}
+  .sc-val{flex:1;color:var(--text)}
+  .sc-unit{color:var(--muted);font-size:11px}
+  .scrub input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;z-index:2}
+  /* theme switch */
+  .themeSeg{display:flex;background:var(--field);border-radius:8px;padding:2px;gap:2px;margin-right:4px}
+  .themeSeg button{width:28px;height:24px;display:grid;place-items:center;border:0;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer}
+  .themeSeg button:hover{color:var(--text)}
+  .themeSeg button.sel{background:var(--chip);color:var(--text);box-shadow:var(--chip-shadow)}
+  .themeSeg svg{width:14px;height:14px}
+  /* timeline */
+  .timeline{display:flex;align-items:center;gap:10px;width:min(860px,94%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 12px 8px 8px;box-shadow:var(--shadow)}
+  .tl-play{flex-shrink:0;width:36px;height:36px;border-radius:10px;border:0;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;cursor:pointer;transition:transform .12s}
+  .tl-play:hover{transform:scale(1.05)}
+  .tl-play svg{width:15px;height:15px}
+  .tl-play .i-pause,.tl-play.playing .i-play{display:none}
+  .tl-play.playing .i-pause{display:block}
+  .tl-time{font:500 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--text);min-width:42px;text-align:center;font-variant-numeric:tabular-nums}
+  .tl-time.muted{color:var(--muted)}
+  .tl-track{position:relative;flex:1;height:38px;border-radius:8px;background:var(--field);overflow:hidden}
+  .tl-segs{position:absolute;inset:3px;display:flex;gap:2px}
+  .tl-seg{flex:1;min-width:0;border-radius:5px;background:var(--field-fill) center/cover no-repeat}
+  .tl-dim{position:absolute;top:0;bottom:0;right:0;left:var(--p,0%);background:color-mix(in srgb,var(--card) 62%,transparent);pointer-events:none}
+  .tl-head{position:absolute;top:0;bottom:0;left:var(--p,0%);width:2px;margin-left:-1px;background:var(--accent);pointer-events:none;box-shadow:0 0 0 1px color-mix(in srgb,var(--card) 60%,transparent)}
+  .tl-head i{position:absolute;top:-1px;left:50%;width:10px;height:6px;transform:translateX(-50%);background:var(--accent);border-radius:0 0 3px 3px}
+  .tl-track input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+  .switch-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px;color:var(--muted);font-size:12px;cursor:pointer}
+  .switch{-webkit-appearance:none;appearance:none;width:30px;height:18px;border-radius:999px;background:var(--line-2);position:relative;cursor:pointer;transition:background .15s;margin:0}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--knob);box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
+  .switch:checked{background:var(--ok)}
+  .switch:checked::after{transform:translateX(12px)}
+  .ex-summary{margin-top:10px;padding:9px 10px;background:var(--field);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.55}
+  .ex-summary b{color:var(--text);font-weight:600}
+  .btn.big{width:100%;justify-content:center;margin-top:12px;padding:10px 12px;font-size:13px;font-weight:600;border-radius:9px}
+  .effects{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+  .fx{text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:7px 6px;border-radius:7px}
+  .fx:hover{background:var(--field-hover)}
+
+  @media (max-width: 1100px){.app{grid-template-columns:240px 1fr 280px}}
 </style>
 </head>
 <body>
@@ -150,6 +259,11 @@
       Showreel Studio
     </div>
     <div class="actions">
+      <div class="themeSeg" id="themeSeg" role="radiogroup" aria-label="Theme">
+        <button data-v="light" title="Light" aria-label="Light theme"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.8" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.8v1.4M8 12.8v1.4M1.8 8h1.4M12.8 8h1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        <button data-v="dark" title="Dark" aria-label="Dark theme"><svg viewBox="0 0 16 16" fill="none"><path d="M13.2 9.6A5.4 5.4 0 0 1 6.4 2.8a5.4 5.4 0 1 0 6.8 6.8Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button>
+        <button data-v="system" title="Match system" aria-label="Match system theme"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M6 13.5h4M8 11v2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+      </div>
       <button class="btn ghost iconBtn" id="btnSound" title="Toggle sound" aria-label="Toggle sound">
         <svg class="ic ic-on" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M5 9v6h3.5L13 19V5L8.5 9H5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
@@ -168,7 +282,17 @@
 
   <aside class="panel left">
     <div class="group">
-      <h3>Designs</h3>
+      <div class="hd">
+        <h3>Designs</h3>
+        <select id="sortSel" class="mini-select" title="Sort designs">
+          <option value="manual">Manual order</option>
+          <option value="az">Name A–Z</option>
+          <option value="za">Name Z–A</option>
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="shuffle">Shuffle</option>
+        </select>
+      </div>
       <label class="drop" id="drop">
         <div class="drop-icon">+</div>
         <div class="drop-title">Drop images or videos</div>
@@ -178,144 +302,130 @@
       <div class="clips" id="clips"></div>
       <div class="hint">Drag to reorder · <span class="kbd">⌘V</span> paste image · <span class="kbd">⌘C</span> copy frame · <span class="kbd">Space</span> play · <span class="kbd">R</span> restart</div>
     </div>
+    <div class="group">
+      <div class="hd">
+        <h3>Recent work</h3>
+        <button class="btn ghost" id="btnSave" title="Save this composition to revisit and re-export later">Save current</button>
+      </div>
+      <div class="projs" id="projList"></div>
+    </div>
   </aside>
 
   <section class="stage">
     <div class="canvasWrap"><canvas id="cv" width="1280" height="720"></canvas></div>
-    <div class="playbar">
-      <button class="btn" id="btnPlay2">▶</button>
-      <input id="seek" type="range" min="0" max="1000" value="0" step="1" />
-      <div class="time" id="time">0 / 0 ms</div>
+    <div class="timeline">
+      <button class="tl-play" id="btnPlay2" aria-label="Play">
+        <svg class="i-play" viewBox="0 0 16 16"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5Z" fill="currentColor"/></svg>
+        <svg class="i-pause" viewBox="0 0 16 16"><rect x="4" y="3" width="3" height="10" rx="1" fill="currentColor"/><rect x="9" y="3" width="3" height="10" rx="1" fill="currentColor"/></svg>
+      </button>
+      <span class="tl-time" id="tlCur">0:00.0</span>
+      <div class="tl-track" id="tlTrack">
+        <div class="tl-segs" id="tlSegs"></div>
+        <div class="tl-dim"></div>
+        <div class="tl-head"><i></i></div>
+        <input id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Scrub timeline" />
+      </div>
+      <span class="tl-time muted" id="time">0:00.0</span>
     </div>
   </section>
 
   <aside class="panel right">
-    <div class="group">
-      <div class="toggle modeTabs" id="modeTabs">
-        <button data-v="preset" class="sel">Templates</button>
-        <button data-v="custom">Custom</button>
-      </div>
-    </div>
+    <section class="sec">
+      <h3>Transition <span class="cur" id="fxName"></span></h3>
+      <div class="effects" id="effects"></div>
+    </section>
 
-    <div id="presetPanel">
-      <div class="group">
-        <h3>Animation Preset</h3>
-        <div class="presets" id="presets"></div>
-      </div>
-      <div class="group">
-        <h3>Timing</h3>
-        <div class="row">
-          <label>Cycle duration</label>
-          <div class="field">
-            <input id="presetDur" type="number" min="500" max="30000" step="100" value="2800" />
-            <span class="unit">ms</span>
-          </div>
+    <section class="sec">
+      <h3>Timing</h3>
+      <div class="prop">
+        <label for="dur">Duration</label>
+        <div class="scrub">
+          <span class="sc-ic"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3.2l2 1.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+          <span class="sc-val" id="durVal"></span>
+          <span class="sc-unit" id="durUnit"></span>
+          <input id="dur" type="range" min="500" max="10000" step="100" aria-label="Duration" />
         </div>
-        <div class="row">
-          <label>Speed</label>
-          <div class="toggle" id="speed">
-            <button data-v="0.5">0.5×</button>
-            <button data-v="0.75">0.75×</button>
-            <button data-v="1" class="sel">1×</button>
-            <button data-v="1.5">1.5×</button>
-            <button data-v="2">2×</button>
-          </div>
+      </div>
+      <div class="prop">
+        <label for="trans">Transition</label>
+        <div class="scrub">
+          <span class="sc-ic"><svg viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="6.5" y="6.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 1.6"/></svg></span>
+          <span class="sc-val" id="transVal"></span>
+          <span class="sc-unit" id="transUnit"></span>
+          <input id="trans" type="range" min="0" max="3000" step="50" aria-label="Transition" />
         </div>
-        <div class="hint">Set the duration of one full cycle, or use Speed to scale all presets.</div>
       </div>
-    </div>
-
-    <div id="customPanel" hidden>
-      <div class="group">
-        <h3>Layout</h3>
-        <div class="templates" id="templates"></div>
+      <div class="prop">
+        <label for="loop">Loop</label>
+        <div class="prop-end"><input id="loop" type="checkbox" class="switch" checked /></div>
       </div>
+    </section>
 
-      <div class="group">
-        <h3>Effect</h3>
-        <div class="effects" id="effects"></div>
+    <section class="sec">
+      <h3>Frame</h3>
+      <div class="prop">
+        <label for="padding">Padding</label>
+        <div class="scrub">
+          <span class="sc-ic"><svg viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="5.5" y="5.5" width="5" height="5" rx="1" fill="currentColor" opacity=".55"/></svg></span>
+          <span class="sc-val" id="paddingVal"></span>
+          <span class="sc-unit" id="paddingUnit"></span>
+          <input id="padding" type="range" min="0" max="20" step="0.5" aria-label="Padding" />
+        </div>
       </div>
-    </div>
-
-    <div class="group">
-      <h3>Format</h3>
-      <div class="row">
+      <div class="prop">
+        <label for="radius">Radius</label>
+        <div class="scrub">
+          <span class="sc-ic"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13V8.5A5.5 5.5 0 0 1 8.5 3H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+          <span class="sc-val" id="radiusVal"></span>
+          <span class="sc-unit" id="radiusUnit"></span>
+          <input id="radius" type="range" min="0" max="15" step="0.5" aria-label="Radius" />
+        </div>
+      </div>
+      <div class="prop">
         <label>Aspect</label>
-        <div class="toggle" id="aspect">
-          <button data-v="16:9" class="sel">16:9</button>
-          <button data-v="1:1">1:1</button>
-          <button data-v="9:16">9:16</button>
-        </div>
+        <div class="toggle" id="aspect"><button data-v="16:9" class="sel">16:9</button><button data-v="1:1">1:1</button><button data-v="9:16">9:16</button></div>
       </div>
-      <div class="row">
-        <label>Background</label>
-        <div class="toggle" id="bgmode">
-          <button data-v="dark" class="sel">Dark</button>
-          <button data-v="light">Light</button>
-        </div>
-      </div>
-      <div class="row">
-        <label>Quality</label>
-        <div class="toggle" id="quality">
-          <button data-v="hd">HD</button>
-          <button data-v="fhd" class="sel">1080p</button>
-          <button data-v="qhd">1440p</button>
-          <button data-v="uhd">4K</button>
-        </div>
-      </div>
-      <div class="row">
+      <div class="prop">
         <label>Image fit</label>
-        <div class="toggle" id="fit">
-          <button data-v="cover" class="sel">Cover</button>
-          <button data-v="contain">Contain</button>
-          <button data-v="fill">Fill</button>
-        </div>
+        <div class="toggle" id="fit"><button data-v="cover" class="sel">Cover</button><button data-v="contain">Contain</button><button data-v="fill">Fill</button></div>
       </div>
-      <div class="row">
-        <label>Padding</label>
-        <div class="field">
-          <input id="padding" type="number" min="0" max="20" step="1" value="6" />
-          <span class="unit">%</span>
-        </div>
+      <div class="prop">
+        <label>Background</label>
+        <div class="toggle" id="bgmode"><button data-v="dark" class="sel">Dark</button><button data-v="light">Light</button></div>
       </div>
-      <div class="row">
-        <label>Tile gap</label>
-        <div class="field">
-          <input id="gap" type="number" min="0" max="6" step="0.5" value="1.5" />
-          <span class="unit">%</span>
-        </div>
+    </section>
+
+    <section class="sec export">
+      <h3>Export</h3>
+      <div class="prop">
+        <label>Format</label>
+        <div class="toggle" id="exFmt"><button data-v="mp4" class="sel">MP4</button><button data-v="gif">GIF</button></div>
       </div>
-      <div class="row">
-        <label>Clip duration</label>
-        <div class="field">
-          <input id="dur" type="number" min="100" max="20000" step="50" value="2000" />
-          <span class="unit">ms</span>
-        </div>
+      <div class="prop" data-for="mp4">
+        <label>Resolution</label>
+        <div class="toggle" id="quality"><button data-v="hd">720p</button><button data-v="fhd" class="sel">1080p</button><button data-v="qhd">1440p</button><button data-v="uhd">4K</button></div>
       </div>
-      <div class="row">
-        <label>Transition</label>
-        <div class="field">
-          <input id="trans" type="number" min="0" max="5000" step="50" value="400" />
-          <span class="unit">ms</span>
-        </div>
+      <div class="prop" data-for="gif" hidden>
+        <label>Resolution</label>
+        <div class="toggle" id="gifRes"><button data-v="360">360p</button><button data-v="480" class="sel">480p</button><button data-v="720">720p</button></div>
       </div>
-      <div class="row">
-        <label>Loop preview</label>
-        <input id="loop" type="checkbox" checked />
+      <div class="prop">
+        <label>Quality</label>
+        <div class="toggle" id="exQuality"><button data-v="low">Low</button><button data-v="medium">Medium</button><button data-v="high" class="sel">High</button></div>
       </div>
-      <details>
-        <summary>Export options</summary>
-        <div class="row" style="margin-top:6px"><label>FPS</label><input id="fps" type="number" min="24" max="60" step="1" value="60" /></div>
-        <div class="row"><label>Bitrate</label><div class="field"><input id="br" type="number" min="2" max="80" step="1" value="20" /><span class="unit">Mbps</span></div></div>
-        <div class="hint">Exports at the canvas resolution above. Bitrate auto-scales with quality — 4K wants 40–60 Mbps for clean detail.</div>
-      </details>
-    </div>
+      <div class="prop" data-for="mp4">
+        <label>Frame rate</label>
+        <div class="toggle" id="fpsSel"><button data-v="24">24</button><button data-v="30">30</button><button data-v="60" class="sel">60</button></div>
+      </div>
+      <div class="ex-summary" id="exHint"></div>
+      <button class="btn primary big" id="btnExportSide">Export showreel</button>
+    </section>
   </aside>
 </div>
 
 <div class="status" id="status"><div class="spinner"></div><span id="statusText">Working…</span></div>
 
-<button id="inspireBtn" class="inspireBtn" title="Randomize preset, timing, and effects">
+<button id="inspireBtn" class="inspireBtn" title="Randomize layout, effect, timing, and style">
   <svg class="ib-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
     <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
     <circle cx="12" cy="12" r="3.4" fill="currentColor"/>
@@ -327,10 +437,7 @@
 /* ----------------------------- state ----------------------------- */
 const state = {
   clips: [],
-  mode: 'preset',
-  presetId: 'heroReveal',
-  presetCycleMs: 2800,
-  speed: 1,
+  mode: 'custom',
   templateId: 'single',
   effectId: 'fade',
   aspect: '16:9',
@@ -338,12 +445,15 @@ const state = {
   quality: 'fhd',
   fit: 'cover',
   paddingPct: 6,
+  radiusPct: 2,
   gapPct: 1.5,
   perDurMs: 2000,
   transMs: 400,
   loop: true,
   fps: 60,
-  br: 20,
+  exFormat: 'mp4',
+  exQuality: 'high',
+  gifRes: 480,
   playing: false,
   t0: 0,
   pausedMs: 0,
@@ -378,7 +488,7 @@ function snapProgress(tMs){
   return slotIdx + frac;
 }
 const uuid = ()=>Math.random().toString(36).slice(2,9);
-const fmtMs = ms => `${Math.round(ms)} ms`;
+const fmtMs = ms => { const s = Math.max(0, ms)/1000; const m = Math.floor(s/60); return `${m}:${(s - m*60).toFixed(1).padStart(4,'0')}`; };
 
 function setStatus(msg, show=true){
   const el = $('#status'); $('#statusText').textContent = msg||'';
@@ -468,8 +578,6 @@ function _classifyClickForSound(target){
   if(target.closest('#btnSound')) return null; // toggling mute itself shouldn't beep
   if(target.closest('#inspireBtn')) return 'sweep';
   if(target.closest('#btnExport')) return 'sweep';
-  if(target.closest('.preset')) return 'pop';
-  if(target.closest('.tpl')) return 'pop';
   if(target.closest('.fx')) return 'tick';
   if(target.closest('.toggle button')) return 'tick';
   if(target.closest('.clip .x')) return 'tick';
@@ -876,10 +984,46 @@ const effects = {
     else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, 0, -(1-e)*h*0.25); }
     else drawClip(ctx,clip,frame,1,1,0,0);
   }},
+  // Shutter: the current shot drops out of its frame like a falling panel,
+  // uncovering the next shot underneath, which lifts out of shadow.
+  slideDown: { name:'Slide down', fn(ctx,clip,frame,t,phase,absT,dur,next){
+    if(phase!=='out'){ drawClip(ctx,clip,frame,1,1,0,0); return; }
+    const [x,y,w,h]=frame;
+    const e = easeInOutCubic(t);
+    const dy = e*h;
+    ctx.save();
+    roundedClip(ctx,x,y,w,h,cornerRadius(w,h));
+    if(next){
+      drawClip(ctx,next,frame,1.04-0.04*e,1,0,0);
+      ctx.fillStyle = `rgba(0,0,0,${0.6*(1-e)})`;
+      ctx.fillRect(x,y,w,h);
+    } else {
+      ctx.fillStyle = state.bgMode==='dark' ? '#0f0f10' : '#ffffff';
+      ctx.fillRect(x,y,w,h);
+    }
+    // Shadow cast by the falling panel onto the revealed shot.
+    const sh = h*0.14, top = y+dy;
+    const g = ctx.createLinearGradient(0, top-sh, 0, top);
+    g.addColorStop(0,'rgba(0,0,0,0)');
+    g.addColorStop(1,`rgba(0,0,0,${0.5*(1-e*0.6)})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(x, top-sh, w, sh);
+    drawClip(ctx,clip,[x,top,w,h],1,1,0,0);
+    // The panel dims slightly as it drops away.
+    ctx.fillStyle = `rgba(0,0,0,${0.3*e})`;
+    ctx.fillRect(x, top, w, h);
+    ctx.restore();
+  }},
   slideLeft: { name:'Slide left', fn(ctx,clip,frame,t,phase){
     const [x,y,w,h]=frame;
     if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, (1-e)*w*0.3, 0); }
     else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, -(1-e)*w*0.3, 0); }
+    else drawClip(ctx,clip,frame,1,1,0,0);
+  }},
+  slideRight: { name:'Slide right', fn(ctx,clip,frame,t,phase){
+    const [x,y,w,h]=frame;
+    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, -(1-e)*w*0.3, 0); }
+    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, (1-e)*w*0.3, 0); }
     else drawClip(ctx,clip,frame,1,1,0,0);
   }},
   blurIn: { name:'Blur in', fn(ctx,clip,frame,t,phase){
@@ -898,29 +1042,6 @@ const effects = {
     else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,0.94+0.06*e, e, 0,0); }
     else drawClip(ctx,clip,frame,1,1,0,0);
   }},
-  swing: { name:'Swing', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    const cx=x+w/2, cy=y+h/2;
-    let rot=0,a=1;
-    if(phase==='in'){ const e=easeOutCubic(t); rot=(1-e)*-0.18; a=t; }
-    else if(phase==='out'){ const e=easeOutCubic(1-t); rot=(1-e)*0.12; a=t; }
-    ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot); ctx.translate(-cx,-cy);
-    drawClip(ctx,clip,frame,1,a,0,0);
-    ctx.restore();
-  }},
-  glitch: { name:'Glitch', fn(ctx,clip,frame,t,phase){
-    const a = phase==='in' ? t : phase==='out' ? 1-t : 1;
-    if(phase!=='hold'){
-      const [x,y,w,h]=frame;
-      const jitter = (1 - (phase==='in'?t:1-t)) * 14;
-      ctx.save(); ctx.globalCompositeOperation='lighter';
-      ctx.globalAlpha = a*0.55;
-      drawClip(ctx,clip,[x+jitter,y,w,h],1,1,0,0,{tint:'#ff4d6a'});
-      drawClip(ctx,clip,[x-jitter,y,w,h],1,1,0,0,{tint:'#4dd9ff'});
-      ctx.restore();
-    }
-    drawClip(ctx,clip,frame,1,a,0,0);
-  }},
   wipeRight: { name:'Wipe →', fn(ctx,clip,frame,t,phase){
     const [x,y,w,h]=frame;
     ctx.save();
@@ -930,18 +1051,6 @@ const effects = {
     ctx.beginPath(); ctx.rect(x,y,cut,h); ctx.clip();
     drawClip(ctx,clip,frame,1,1,0,0);
     ctx.restore();
-  }},
-  slideDown: { name:'Slide down', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, 0, -(1-e)*h*0.25); }
-    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, 0, (1-e)*h*0.25); }
-    else drawClip(ctx,clip,frame,1,1,0,0);
-  }},
-  slideRight: { name:'Slide right', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    if(phase==='in'){ const e=easeOutCubic(t); drawClip(ctx,clip,frame,1, e, -(1-e)*w*0.3, 0); }
-    else if(phase==='out'){ const e=easeOutCubic(1-t); drawClip(ctx,clip,frame,1, e, (1-e)*w*0.3, 0); }
-    else drawClip(ctx,clip,frame,1,1,0,0);
   }},
   iris: { name:'Iris', fn(ctx,clip,frame,t,phase){
     const [x,y,w,h]=frame;
@@ -976,103 +1085,6 @@ const effects = {
     ctx.save();
     ctx.translate(cx,cy); ctx.scale(sx,1); ctx.translate(-cx,-cy);
     drawClip(ctx,clip,frame,1,a,0,0);
-    ctx.restore();
-  }},
-  flipY: { name:'Flip vert', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    const cx=x+w/2, cy=y+h/2;
-    let sy = 1, a = 1;
-    if(phase==='in'){ const e=easeOutCubic(t); sy = Math.sin(e*Math.PI/2); a = e; }
-    else if(phase==='out'){ const e=easeOutCubic(1-t); sy = Math.sin(e*Math.PI/2); a = e; }
-    if(Math.abs(sy) < 0.02) return;
-    ctx.save();
-    ctx.translate(cx,cy); ctx.scale(1,sy); ctx.translate(-cx,-cy);
-    drawClip(ctx,clip,frame,1,a,0,0);
-    ctx.restore();
-  }},
-  bounce: { name:'Bounce', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    if(phase==='in'){
-      const e = easeOutBack(t);
-      drawClip(ctx,clip,frame,1, clamp(t*1.5,0,1), 0, (1-e)*-h*0.3);
-    } else if(phase==='out'){
-      const e = easeOutCubic(1-t);
-      drawClip(ctx,clip,frame,1, t, 0, (1-e)*h*0.2);
-    } else drawClip(ctx,clip,frame,1,1,0,0);
-  }},
-  shake: { name:'Shake', fn(ctx,clip,frame,t,phase,absT){
-    const a = phase==='in' ? t : phase==='out' ? 1-t : 1;
-    let dx=0, dy=0;
-    if(phase==='hold'){
-      const decay = Math.max(0, 1 - t*4);
-      const amp = 16 * decay;
-      const f = absT * 0.06;
-      dx = Math.sin(f) * amp;
-      dy = Math.cos(f*1.3) * amp;
-    }
-    drawClip(ctx,clip,frame,1,a,dx,dy);
-  }},
-  splitBars: { name:'Bars', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    const bars = 6;
-    const bh = h/bars;
-    let k = 1;
-    if(phase==='in') k = easeOutCubic(t);
-    if(phase==='out') k = easeOutCubic(1-t);
-    ctx.save();
-    ctx.beginPath();
-    for(let i=0;i<bars;i++){
-      const cw = w * k;
-      const bx = i%2===0 ? x : x + (w - cw);
-      ctx.rect(bx, y + i*bh, cw, bh);
-    }
-    ctx.clip();
-    drawClip(ctx,clip,frame,1,1,0,0);
-    ctx.restore();
-  }},
-  pixels: { name:'Pixel dissolve', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    let progress = 1;
-    if(phase==='in') progress = easeOutCubic(t);
-    if(phase==='out') progress = easeOutCubic(1-t);
-    // Draw to offscreen, then mask in tiles
-    const cols = 24, rows = Math.round(cols * h/w);
-    ctx.save();
-    ctx.beginPath();
-    const tw = w/cols, th = h/rows;
-    // deterministic ordering
-    for(let i=0;i<cols*rows;i++){
-      const seed = ((i*9301+49297) % 233280)/233280;
-      if(seed < progress){
-        const cx = (i%cols)*tw + x;
-        const cy = Math.floor(i/cols)*th + y;
-        ctx.rect(cx, cy, tw+0.5, th+0.5);
-      }
-    }
-    ctx.clip();
-    drawClip(ctx,clip,frame,1,1,0,0);
-    ctx.restore();
-  }},
-  tilt: { name:'Tilt', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    const cx=x+w/2, cy=y+h/2;
-    let rot=0, sk=0, a=1;
-    if(phase==='in'){ const e=easeOutCubic(t); rot=(1-e)*0.08; sk=(1-e)*0.15; a=t; }
-    else if(phase==='out'){ const e=easeOutCubic(1-t); rot=-(1-e)*0.06; sk=-(1-e)*0.12; a=t; }
-    ctx.save();
-    ctx.translate(cx,cy); ctx.rotate(rot); ctx.transform(1, sk*0.2, sk*0.3, 1, 0, 0); ctx.translate(-cx,-cy);
-    drawClip(ctx,clip,frame,1,a,0,0);
-    ctx.restore();
-  }},
-  roll: { name:'Roll in', fn(ctx,clip,frame,t,phase){
-    const [x,y,w,h]=frame;
-    const cx=x+w/2, cy=y+h/2;
-    let rot=0, dx=0, a=1;
-    if(phase==='in'){ const e=easeOutCubic(t); rot=(1-e)*-0.6; dx=(1-e)*-w*0.3; a=t; }
-    else if(phase==='out'){ const e=easeOutCubic(1-t); rot=(1-e)*0.4; dx=(1-e)*w*0.3; a=t; }
-    ctx.save();
-    ctx.translate(cx,cy); ctx.rotate(rot); ctx.translate(-cx,-cy);
-    drawClip(ctx,clip,frame,1,a,dx,0);
     ctx.restore();
   }},
   perspective: { name:'Perspective', fn(ctx,clip,frame,t,phase){
@@ -1111,6 +1123,8 @@ const effects = {
 };
 
 /* ----------------------------- drawing primitives ----------------------------- */
+// Corner radius for a tile, as a % of its shorter side (Style → Corner radius).
+function cornerRadius(w,h){ return Math.min(w,h) * state.radiusPct / 100; }
 function roundedClip(ctx,x,y,w,h,r=10){
   ctx.beginPath();
   ctx.moveTo(x+r,y);
@@ -1128,7 +1142,7 @@ function drawClip(ctx, clip, frame, zoom=1, alpha=1, dx=0, dy=0, opts={}){
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.globalAlpha = clamp(alpha,0,1);
-  roundedClip(ctx,x,y,w,h,Math.min(w,h)*0.02);
+  roundedClip(ctx,x,y,w,h,cornerRadius(w,h));
   // background fill behind transparent images
   ctx.fillStyle = state.bgMode==='dark' ? '#0f0f10' : '#ffffff';
   ctx.fillRect(x,y,w,h);
@@ -1159,61 +1173,11 @@ function drawClip(ctx, clip, frame, zoom=1, alpha=1, dx=0, dy=0, opts={}){
 }
 
 /* Empty-state slots — dashed placeholders so users can see where their
-   designs will land in the current preset / layout. */
+   designs will land in the current layout. */
 function drawEmptySlots(ctx, W, H){
   const box = inset(W,H);
-  let frames = [];
-  if(state.mode === 'preset'){
-    const preset = presets[state.presetId];
-    // Approximate slot positions per preset for the placeholder.
-    if(preset.slots === 1){
-      frames = [[box.x, box.y, box.w, box.h]];
-    } else if(preset.slots === 2){
-      const g = state.gapPct/100; const cw = (1-g)/2;
-      frames = [[box.x, box.y, box.w*cw, box.h], [box.x+box.w*(cw+g), box.y, box.w*cw, box.h]];
-    } else if(preset.slots === 3){
-      frames = [
-        [box.x,                 box.y + box.h*0.20, box.w*0.25, box.h*0.60],
-        [box.x + box.w*0.30,    box.y + box.h*0.05, box.w*0.40, box.h*0.90],
-        [box.x + box.w*0.75,    box.y + box.h*0.20, box.w*0.25, box.h*0.60],
-      ];
-    } else if(preset.slots === 4){
-      const tileW = box.w*0.78, gap = box.w*0.08;
-      const startX = (W - tileW)/2;
-      for(let i=0;i<4;i++) frames.push([startX + (i-1.5)*0, box.y, tileW, box.h]);
-      // Just show centered tile.
-      frames = [[startX, box.y, tileW, box.h]];
-    } else if(preset.slots === 6){
-      const g = state.gapPct/100;
-      const cw = (1-2*g)/3, ch = (1-g)/2;
-      for(let r=0;r<2;r++) for(let c=0;c<3;c++){
-        frames.push([box.x+c*(cw+g)*box.w, box.y+r*(ch+g)*box.h, cw*box.w, ch*box.h]);
-      }
-    } else if(preset.slots === 9){
-      const g = state.gapPct/100;
-      const c = (1-2*g)/3;
-      for(let r=0;r<3;r++) for(let col=0;col<3;col++){
-        frames.push([box.x+col*(c+g)*box.w, box.y+r*(c+g)*box.h, c*box.w, c*box.h]);
-      }
-    } else if(preset.slots === 5){
-      // Ribbon — show 3 sample tiles centered.
-      const tileH = box.h*0.55, tileW = tileH*1.4, gap = box.w*0.04;
-      const startX = (W - 3*tileW - 2*gap)/2;
-      for(let i=0;i<3;i++){
-        frames.push([startX + i*(tileW+gap), box.y + (box.h - tileH)/2, tileW, tileH]);
-      }
-    } else {
-      frames = [[box.x, box.y, box.w, box.h]];
-    }
-  } else {
-    // Custom mode placeholder = current layout's frames.
-    const layout = layouts[state.templateId];
-    if(layout.continuous){
-      frames = [[box.x, box.y, box.w, box.h]];
-    } else {
-      frames = layout.frames(W, H);
-    }
-  }
+  const layout = layouts[state.templateId];
+  const frames = layout.continuous ? [[box.x, box.y, box.w, box.h]] : layout.frames(W, H);
   const stroke = state.bgMode==='dark' ? '#27272d' : '#cfcfca';
   const fill   = state.bgMode==='dark' ? '#161618' : '#ececea';
   const text   = state.bgMode==='dark' ? '#4a4a52' : '#9a9aa0';
@@ -1221,7 +1185,7 @@ function drawEmptySlots(ctx, W, H){
   frames.forEach((f, i) => {
     const [x,y,w,h] = f;
     ctx.fillStyle = fill;
-    roundedRectStroke(ctx, x, y, w, h, Math.min(w,h)*0.02, stroke, Math.max(2, W*0.0015), true);
+    roundedRectStroke(ctx, x, y, w, h, cornerRadius(w,h), stroke, Math.max(2, W*0.0015), true);
     ctx.fillStyle = text;
     ctx.textAlign = 'center';
     ctx.font = `500 ${Math.min(w,h)*0.06}px -apple-system,"Inter",sans-serif`;
@@ -1247,558 +1211,8 @@ function roundedRectStroke(ctx, x, y, w, h, r, strokeColor, lineWidth, fillFirst
   ctx.setLineDash([]);
 }
 
-/* ----------------------------- presets ----------------------------- */
-/* Each preset is a fully choreographed animation that cycles through clips.
-   - slots: how many clips it shows per cycle
-   - cycleMs: duration of one cycle (one group of `slots` clips)
-   - render(ctx, W, H, clipsForCycle, tInCycle): draws the scene at time tInCycle (0..cycleMs)
-   Total reel length = cycleMs × ceil(clips.length / slots). */
-/* Presets use NORMALIZED time u ∈ [0, 1] within one cycle, so the cycle
-   duration can be set externally without rewriting the timing math. */
-const presets = {
-  heroReveal: {
-    name:'Hero Reveal',
-    desc:'Big shot rises in, drifts, sweeps off as the next arrives.',
-    mini:'<i style="left:14%;top:10%;width:72%;height:80%"></i>',
-    slots:1,
-    cycleMs:2800,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const entry = 0.22, exit = 0.22;
-      const cur = cs[0], nx = cs[1] || cs[0];
-      if(u < entry){
-        const k = easeOutQuint(u/entry);
-        const dy = (1-k) * box.h*0.20;
-        ctx.save(); ctx.globalAlpha = k;
-        drawClip(ctx, cur, [box.x, box.y+dy, box.w, box.h], 0.94+0.06*k, 1, 0, 0);
-        ctx.restore();
-      } else if(u > 1-exit){
-        const k = easeInOutQuint((u-(1-exit))/exit);
-        ctx.save(); ctx.globalAlpha = 1-k;
-        drawClip(ctx, cur, [box.x - k*W*0.28, box.y - k*H*0.20, box.w, box.h], 1+0.05*k, 1, 0, 0);
-        ctx.restore();
-        ctx.save(); ctx.globalAlpha = k;
-        drawClip(ctx, nx, [box.x + (1-k)*W*0.28, box.y + (1-k)*H*0.20, box.w, box.h], 0.94+0.06*k, 1, 0, 0);
-        ctx.restore();
-      } else {
-        // Held: subtle Ken Burns drift
-        const m = (u-entry)/(1-entry-exit);
-        const z = 1.0 + 0.06 * easeInOutCubic(m);
-        const dx = (m-0.5) * box.w*0.02;
-        drawClip(ctx, cur, [box.x+dx, box.y, box.w, box.h], z, 1, 0, 0);
-      }
-    }
-  },
-  cardCascade: {
-    name:'Card Cascade',
-    desc:'Six tiles fly in stacked, then sweep off right.',
-    mini:'<i style="left:4%;top:8%;width:28%;height:38%"></i><i style="left:36%;top:8%;width:28%;height:38%"></i><i style="left:68%;top:8%;width:28%;height:38%"></i><i style="left:4%;top:54%;width:28%;height:38%"></i><i style="left:36%;top:54%;width:28%;height:38%"></i><i style="left:68%;top:54%;width:28%;height:38%"></i>',
-    slots:6,
-    cycleMs:5500,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const g = state.gapPct/100;
-      const cw = (1 - 2*g) / 3, ch = (1 - g) / 2;
-      const tiles = [];
-      for(let r=0;r<2;r++) for(let c=0;c<3;c++){
-        tiles.push({
-          x: box.x + c*(cw+g)*box.w,
-          y: box.y + r*(ch+g)*box.h,
-          w: cw*box.w, h: ch*box.h,
-        });
-      }
-      // Normalized stagger windows
-      const entryWin = 0.12, exitWin = 0.16, stagger = 0.04;
-      tiles.forEach((tile, i) => {
-        const enterStart = i * stagger;
-        const enterEnd = enterStart + entryWin;
-        const exitStart = 1 - exitWin - (tiles.length-1-i)*stagger*0.6;
-        const exitEnd = exitStart + exitWin;
-        let alpha = 0, dx = 0, dy = 0, scale = 1;
-        if(u < enterStart) return;
-        if(u < enterEnd){
-          const k = easeOutQuint(clamp((u-enterStart)/entryWin, 0, 1));
-          alpha = k;
-          dy = (1-k)*tile.h*0.5;
-          scale = 0.88 + 0.12*k;
-        } else if(u < exitStart){
-          alpha = 1;
-        } else if(u < exitEnd){
-          const k = easeInOutQuint((u - exitStart)/exitWin);
-          alpha = 1 - k;
-          dx = k * W * 0.55;
-          scale = 1 - 0.04*k;
-        } else return;
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        drawClip(ctx, cs[i % cs.length], [tile.x+dx, tile.y+dy, tile.w, tile.h], scale, 1, 0, 0);
-        ctx.restore();
-      });
-    }
-  },
-  focusPan: {
-    name:'Focus Pan',
-    desc:'Camera pans across a row, holding on each shot.',
-    mini:'<i style="left:18%;top:18%;width:64%;height:64%"></i><i style="left:-22%;top:24%;width:34%;height:52%;opacity:.5"></i><i style="left:88%;top:24%;width:34%;height:52%;opacity:.5"></i>',
-    slots:4,
-    cycleMs:8000,
-    render(ctx, W, H, cs, u){
-      const n = this.slots;
-      const box = inset(W,H);
-      const tileH = box.h, tileW = box.w * 0.78, gap = box.w * 0.08;
-      // Hold each clip ~60% of its segment, pan ~40%.
-      const seg = 1 / n;
-      const holdFrac = 0.55;
-      let pos = 0;
-      const segIdx = Math.min(n-1, Math.floor(u/seg));
-      const inSeg = (u - segIdx*seg) / seg;
-      if(segIdx === n-1){
-        pos = n-1;
-      } else if(inSeg < holdFrac){
-        pos = segIdx;
-      } else {
-        const pk = (inSeg - holdFrac)/(1-holdFrac);
-        pos = segIdx + easeInOutQuint(pk);
-      }
-      const focusCx = pos * (tileW + gap) + tileW/2;
-      const stripX = W/2 - focusCx;
-      const y = box.y;
-      for(let k=0;k<n;k++){
-        const x = stripX + k*(tileW+gap);
-        const d = Math.abs(k - pos);
-        const sc = 1 + 0.06 * clamp(1-d, 0, 1);
-        const a = 1 - clamp(d*0.35, 0, 0.7);
-        ctx.save();
-        ctx.globalAlpha = a;
-        drawClip(ctx, cs[k % cs.length], [x, y, tileW, tileH], sc, 1, 0, 0);
-        ctx.restore();
-      }
-    }
-  },
-  tripleSwitch: {
-    name:'Triple Switch',
-    desc:'Three cards smoothly trade L / center / R positions.',
-    mini:'<i style="left:2%;top:24%;width:24%;height:52%;opacity:.7"></i><i style="left:28%;top:14%;width:44%;height:72%"></i><i style="left:74%;top:24%;width:24%;height:52%;opacity:.7"></i>',
-    slots:3,
-    cycleMs:6000,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const positions = [
-        { x: box.x,                 y: box.y + box.h*0.20, w: box.w*0.25, h: box.h*0.60, a: 0.55 },
-        { x: box.x + box.w*0.30,    y: box.y + box.h*0.05, w: box.w*0.40, h: box.h*0.90, a: 1.00 },
-        { x: box.x + box.w*0.75,    y: box.y + box.h*0.20, w: box.w*0.25, h: box.h*0.60, a: 0.55 },
-      ];
-      const stepN = u * 3; // 0..3
-      const step = Math.min(2, Math.floor(stepN));
-      // Slow in/out per step — smoother than linear interpolation across the step.
-      const k = easeInOutQuint(stepN - step);
-      const fromAssign = (i) => (i + step) % 3;
-      const toAssign   = (i) => (i + step + 1) % 3;
-      const order = [0,1,2].sort((a,b)=>{
-        const sa = Math.max(positions[fromAssign(a)].w, positions[toAssign(a)].w);
-        const sb = Math.max(positions[fromAssign(b)].w, positions[toAssign(b)].w);
-        return sa - sb;
-      });
-      for(const i of order){
-        const p1 = positions[fromAssign(i)];
-        const p2 = positions[toAssign(i)];
-        const x = p1.x + (p2.x-p1.x)*k;
-        const y = p1.y + (p2.y-p1.y)*k;
-        const w = p1.w + (p2.w-p1.w)*k;
-        const h = p1.h + (p2.h-p1.h)*k;
-        const a = p1.a + (p2.a-p1.a)*k;
-        ctx.save();
-        ctx.globalAlpha = a;
-        drawClip(ctx, cs[i % cs.length], [x,y,w,h], 1, 1, 0, 0);
-        ctx.restore();
-      }
-    }
-  },
-  quickCuts: {
-    name:'Quick Cuts',
-    desc:'Snappy full-bleed cuts with diagonal wipes.',
-    mini:'<i style="left:2%;top:4%;width:96%;height:92%"></i>',
-    slots:1,
-    cycleMs:900,
-    render(ctx, W, H, cs, u){
-      const transFrac = 0.28;
-      const cur = cs[0], next = cs[1] || cs[0];
-      const box = inset(W,H);
-      drawClip(ctx, cur, [box.x, box.y, box.w, box.h], 1, 1, 0, 0);
-      if(u > 1-transFrac){
-        const k = easeInOutQuint((u-(1-transFrac))/transFrac);
-        ctx.save();
-        const skew = H*0.4;
-        const cutX = (W + skew) * k - skew;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(cutX, 0);
-        ctx.lineTo(cutX - skew, H);
-        ctx.lineTo(0, H);
-        ctx.closePath();
-        ctx.clip();
-        drawClip(ctx, next, [box.x, box.y, box.w, box.h], 1, 1, 0, 0);
-        ctx.restore();
-      }
-    }
-  },
-  bentoStory: {
-    name:'Bento Story',
-    desc:'Bento grid where the hero tile rotates positions.',
-    mini:'<i style="left:4%;top:8%;width:58%;height:84%"></i><i style="left:66%;top:8%;width:30%;height:40%"></i><i style="left:66%;top:52%;width:30%;height:40%"></i>',
-    slots:3,
-    cycleMs:5400,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const g = state.gapPct/100;
-      const big = 0.62, rightW = 1-big-g, cellH = (1-g)/2;
-      const positions = [
-        { x: box.x,                       y: box.y,                        w: box.w*big,    h: box.h         },
-        { x: box.x + box.w*(big+g),       y: box.y,                        w: box.w*rightW, h: box.h*cellH   },
-        { x: box.x + box.w*(big+g),       y: box.y + box.h*(cellH+g),      w: box.w*rightW, h: box.h*cellH   },
-      ];
-      const stepN = u * 3;
-      const step = Math.min(2, Math.floor(stepN));
-      const k = easeInOutQuint(stepN - step);
-      const fromAssign = (i) => (i + step) % 3;
-      const toAssign   = (i) => (i + step + 1) % 3;
-      const order = [0,1,2].sort((a,b)=>{
-        const sa = Math.max(positions[fromAssign(a)].w, positions[toAssign(a)].w);
-        const sb = Math.max(positions[fromAssign(b)].w, positions[toAssign(b)].w);
-        return sa - sb;
-      });
-      for(const i of order){
-        const p1 = positions[fromAssign(i)];
-        const p2 = positions[toAssign(i)];
-        const x = p1.x + (p2.x-p1.x)*k;
-        const y = p1.y + (p2.y-p1.y)*k;
-        const w = p1.w + (p2.w-p1.w)*k;
-        const h = p1.h + (p2.h-p1.h)*k;
-        drawClip(ctx, cs[i % cs.length], [x,y,w,h], 1, 1, 0, 0);
-      }
-    }
-  },
-  spotlight: {
-    name:'Spotlight',
-    desc:'Iris-reveal with slow zoom and crossfade.',
-    mini:'<i style="left:12%;top:6%;width:76%;height:88%"></i>',
-    slots:1,
-    cycleMs:4200,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const entry = 0.18, exit = 0.18;
-      const cur = cs[0], nx = cs[1] || cs[0];
-      if(u < entry){
-        const k = easeOutQuint(u/entry);
-        ctx.save();
-        ctx.beginPath();
-        const cx = box.x+box.w/2, cy = box.y+box.h/2;
-        const r = Math.hypot(box.w, box.h)/2 * k;
-        ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();
-        drawClip(ctx, cur, [box.x, box.y, box.w, box.h], 1.06 - 0.06*k, 1, 0, 0);
-        ctx.restore();
-      } else if(u > 1-exit){
-        const k = easeInOutQuint((u-(1-exit))/exit);
-        ctx.save(); ctx.globalAlpha = 1-k;
-        drawClip(ctx, cur, [box.x, box.y, box.w, box.h], 1.0 + 0.06*k, 1, 0, 0);
-        ctx.restore();
-        ctx.save();
-        ctx.beginPath();
-        const cx = box.x+box.w/2, cy = box.y+box.h/2;
-        const r = Math.hypot(box.w, box.h)/2 * k;
-        ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip();
-        drawClip(ctx, nx, [box.x, box.y, box.w, box.h], 1.06 - 0.06*k, 1, 0, 0);
-        ctx.restore();
-      } else {
-        const m = (u-entry)/(1-entry-exit);
-        const z = 1.0 + 0.08 * m;
-        drawClip(ctx, cur, [box.x, box.y, box.w, box.h], z, 1, 0, 0);
-      }
-    }
-  },
-
-  /* ----- new presets ----- */
-
-  stackCards: {
-    name:'Stack Cards',
-    desc:'Deck-style stack — top card peels off, next rises.',
-    mini:'<i style="left:24%;top:18%;width:48%;height:64%;transform:rotate(-4deg)"></i><i style="left:28%;top:14%;width:48%;height:68%;opacity:.9"></i><i style="left:32%;top:18%;width:48%;height:64%;opacity:.7"></i>',
-    slots:3,
-    cycleMs:3200,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const cw = box.w*0.5, ch = box.h*0.85;
-      const cx = box.x + box.w/2, cy = box.y + box.h/2;
-      // Three z-stacked cards, top one peels away over the cycle.
-      const layers = [
-        { z:0 }, { z:1 }, { z:2 }, // back to front
-      ];
-      const k = easeInOutQuint(u);
-      // Front card slides up-right + fades + rotates out; others advance forward.
-      for(let i=0;i<3;i++){
-        const clip = cs[i % cs.length];
-        let depth = i; // 0=back, 2=front
-        // Advance depth by u: front goes from 2 to 3 (leaves), others move forward.
-        const eff = depth + 1 - k;
-        // Map eff (in [-1..3]) to position
-        if(eff < -0.05 || eff > 3.05) continue;
-        const layerOffset = (eff - 2) * 18;
-        const scale = 1 + (eff - 2) * 0.04;
-        const rot = (eff - 2) * 0.12;
-        const alpha = clamp(1 - Math.max(0, eff - 2)*1.6, 0, 1) * clamp((eff+1), 0, 1);
-        const px = cx + Math.max(0,eff-2) * W*0.35;
-        const py = cy + Math.max(0,eff-2) * -H*0.25 + layerOffset;
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.translate(px, py); ctx.rotate(rot); ctx.translate(-px, -py);
-        drawClip(ctx, clip, [px - cw/2, py - ch/2, cw, ch], scale, 1, 0, 0);
-        ctx.restore();
-      }
-    }
-  },
-  gridReveal: {
-    name:'Grid Reveal',
-    desc:'3×3 cells light up in sequence, then collapse to one.',
-    mini:'<i style="left:4%;top:4%;width:28%;height:28%"></i><i style="left:36%;top:4%;width:28%;height:28%"></i><i style="left:68%;top:4%;width:28%;height:28%"></i><i style="left:4%;top:36%;width:28%;height:28%"></i><i style="left:36%;top:36%;width:28%;height:28%"></i><i style="left:68%;top:36%;width:28%;height:28%"></i><i style="left:4%;top:68%;width:28%;height:28%"></i><i style="left:36%;top:68%;width:28%;height:28%"></i><i style="left:68%;top:68%;width:28%;height:28%"></i>',
-    slots:9,
-    cycleMs:6500,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const g = state.gapPct/100;
-      const c = (1 - 2*g) / 3;
-      const tiles = [];
-      for(let r=0;r<3;r++) for(let col=0;col<3;col++){
-        tiles.push({
-          x: box.x + col*(c+g)*box.w,
-          y: box.y + r*(c+g)*box.h,
-          w: c*box.w, h: c*box.h,
-        });
-      }
-      const order = [4,0,2,6,8,1,5,7,3]; // center -> corners -> sides
-      const revealEnd = 0.55, collapseStart = 0.75;
-      const perTile = revealEnd / order.length;
-      tiles.forEach((tile, i) => {
-        const orderIdx = order.indexOf(i);
-        const tStart = orderIdx * perTile;
-        const tEnd = tStart + perTile + 0.05; // slight overlap
-        let alpha = 0, scale = 1;
-        if(u >= tStart){
-          if(u < tEnd){
-            const k = easeOutQuint((u-tStart)/(tEnd-tStart));
-            alpha = k;
-            scale = 0.86 + 0.14*k;
-          } else if(u < collapseStart){
-            alpha = 1; scale = 1;
-          } else {
-            // Collapse all into center cell (tile index 4)
-            const k = easeInOutQuint((u - collapseStart)/(1 - collapseStart));
-            const tgt = tiles[4];
-            const dx = (tgt.x - tile.x) * k;
-            const dy = (tgt.y - tile.y) * k;
-            const dw = tile.w + (tgt.w - tile.w)*k;
-            const dh = tile.h + (tgt.h - tile.h)*k;
-            ctx.save();
-            ctx.globalAlpha = i===4 ? 1 : 1-k;
-            drawClip(ctx, cs[i % cs.length], [tile.x+dx, tile.y+dy, dw, dh], 1, 1, 0, 0);
-            ctx.restore();
-            return;
-          }
-        } else return;
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        drawClip(ctx, cs[i % cs.length], [tile.x, tile.y, tile.w, tile.h], scale, 1, 0, 0);
-        ctx.restore();
-      });
-    }
-  },
-  splitReveal: {
-    name:'Split Reveal',
-    desc:'Two halves slide in from opposite sides.',
-    mini:'<i style="left:0;top:0;width:50%;height:100%"></i><i style="left:50%;top:0;width:50%;height:100%;opacity:.7"></i>',
-    slots:2,
-    cycleMs:3400,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const g = state.gapPct/200; // half gap so total = gapPct/100
-      const cw = (box.w - g*W*2)/2;
-      const entry = 0.25, exit = 0.20;
-      const left = cs[0], right = cs[1] || cs[0];
-      // Left slides from top, right slides from bottom.
-      const kIn = u < entry ? easeOutQuint(u/entry) : 1;
-      const kOut = u > 1-exit ? easeInOutQuint((u-(1-exit))/exit) : 0;
-      const leftDy = (1-kIn)*-H*0.6 + kOut*-H*0.6;
-      const rightDy = (1-kIn)*H*0.6 + kOut*H*0.6;
-      const alpha = 1 - kOut;
-      ctx.save(); ctx.globalAlpha = alpha;
-      drawClip(ctx, left,  [box.x,            box.y + leftDy,  cw, box.h], 1, 1, 0, 0);
-      drawClip(ctx, right, [box.x + cw + g*W*2, box.y + rightDy, cw, box.h], 1, 1, 0, 0);
-      ctx.restore();
-    }
-  },
-  polaroidDrop: {
-    name:'Polaroid Drop',
-    desc:'Photos drop in with slight rotation, like real polaroids.',
-    mini:'<i style="left:10%;top:14%;width:42%;height:72%;transform:rotate(-5deg)"></i><i style="left:46%;top:14%;width:42%;height:72%;transform:rotate(4deg);opacity:.9"></i>',
-    slots:4,
-    cycleMs:4500,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const cw = box.w*0.42, ch = box.h*0.78;
-      // Four random-feeling but deterministic positions/rotations.
-      const layout = [
-        { x: box.x + box.w*0.05, y: box.y + box.h*0.10, r:-0.10 },
-        { x: box.x + box.w*0.30, y: box.y + box.h*0.05, r: 0.06 },
-        { x: box.x + box.w*0.55, y: box.y + box.h*0.12, r:-0.04 },
-        { x: box.x + box.w*0.32, y: box.y + box.h*0.20, r: 0.09 },
-      ];
-      const entryWin = 0.18, stagger = 0.10, holdEnd = 0.78, exitWin = 0.18;
-      layout.forEach((p, i) => {
-        const tStart = i*stagger;
-        const tEnd = tStart + entryWin;
-        let alpha=0, dy=0, rot = p.r, scale=1;
-        if(u < tStart) return;
-        if(u < tEnd){
-          const k = easeOutQuint(clamp((u-tStart)/entryWin, 0, 1));
-          alpha = k;
-          dy = (1-k) * -H*0.55;
-          rot = p.r * (0.4 + 0.6*k);
-          scale = 0.92 + 0.08*k;
-        } else if(u < holdEnd){
-          alpha = 1;
-        } else if(u < holdEnd + exitWin){
-          const k = easeInOutQuint((u-holdEnd)/exitWin);
-          alpha = 1 - k;
-          scale = 1 - 0.06*k;
-          dy = k * H*0.15;
-        } else return;
-        const cx = p.x + cw/2, cy = p.y + ch/2 + dy;
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.translate(cx, cy); ctx.rotate(rot); ctx.translate(-cx, -cy);
-        drawClip(ctx, cs[i % cs.length], [p.x, p.y + dy, cw, ch], scale, 1, 0, 0);
-        ctx.restore();
-      });
-    }
-  },
-  cinematicPush: {
-    name:'Cinematic Push',
-    desc:'Slow cinematic push-in with deep crossfade.',
-    mini:'<i style="left:8%;top:8%;width:84%;height:84%"></i>',
-    slots:1,
-    cycleMs:4800,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const cur = cs[0], nx = cs[1] || cs[0];
-      const crossStart = 0.78;
-      // Continuous Ken Burns through whole cycle.
-      const z = 1.0 + 0.18 * easeInOutCubic(u);
-      const dx = (u-0.5) * box.w*0.06;
-      drawClip(ctx, cur, [box.x+dx, box.y, box.w, box.h], z, 1, 0, 0);
-      if(u > crossStart){
-        const k = easeInOutQuint((u-crossStart)/(1-crossStart));
-        ctx.save(); ctx.globalAlpha = k;
-        ctx.filter = `blur(${(1-k)*6}px)`;
-        const nz = 1.05 + 0.05*k;
-        drawClip(ctx, nx, [box.x, box.y, box.w, box.h], nz, 1, 0, 0);
-        ctx.restore();
-      }
-      // Vignette
-      const vg = ctx.createRadialGradient(W/2,H/2, Math.min(W,H)*0.3, W/2,H/2, Math.max(W,H)*0.7);
-      vg.addColorStop(0,'rgba(0,0,0,0)');
-      vg.addColorStop(1, state.bgMode==='dark'?'rgba(0,0,0,0.55)':'rgba(0,0,0,0.18)');
-      ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
-    }
-  },
-  zoomTour: {
-    name:'Zoom Tour',
-    desc:'Zooms into each design region of a grid in turn.',
-    mini:'<i style="left:8%;top:14%;width:84%;height:72%"></i>',
-    slots:4,
-    cycleMs:7000,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      // Lay 4 clips out in a 2x2 logical grid; "camera" zooms in on each.
-      const cells = [
-        {x:0,   y:0,   w:0.5, h:0.5},
-        {x:0.5, y:0,   w:0.5, h:0.5},
-        {x:0,   y:0.5, w:0.5, h:0.5},
-        {x:0.5, y:0.5, w:0.5, h:0.5},
-      ];
-      const seg = 1/4, holdFrac = 0.55;
-      const idx = Math.min(3, Math.floor(u/seg));
-      const inSeg = (u - idx*seg)/seg;
-      const nextIdx = (idx+1) % 4;
-      let cam = cells[idx];
-      if(inSeg > holdFrac){
-        const k = easeInOutQuint((inSeg - holdFrac)/(1-holdFrac));
-        const a = cells[idx], b = cells[nextIdx];
-        cam = {x:a.x+(b.x-a.x)*k, y:a.y+(b.y-a.y)*k, w:a.w+(b.w-a.w)*k, h:a.h+(b.h-a.h)*k};
-      }
-      // Render full grid scaled and translated so cam fills the box.
-      const scale = 1/cam.w; // assumes square cells
-      const ox = box.x - cam.x * box.w * scale;
-      const oy = box.y - cam.y * box.h * scale;
-      cells.forEach((cell, i) => {
-        const x = ox + cell.x*box.w*scale;
-        const y = oy + cell.y*box.h*scale;
-        const w = cell.w*box.w*scale;
-        const h = cell.h*box.h*scale;
-        // Cull entirely off-screen.
-        if(x+w < box.x-50 || x > box.x+box.w+50 || y+h < box.y-50 || y > box.y+box.h+50) return;
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
-        drawClip(ctx, cs[i % cs.length], [x,y,w,h], 1, 1, 0, 0);
-        ctx.restore();
-      });
-    }
-  },
-  ribbon: {
-    name:'Ribbon',
-    desc:'Cards drift across in a flowing ribbon.',
-    mini:'<i style="left:-10%;top:32%;width:28%;height:36%;transform:rotate(-6deg)"></i><i style="left:22%;top:24%;width:28%;height:48%;transform:rotate(2deg)"></i><i style="left:54%;top:32%;width:28%;height:36%;transform:rotate(6deg);opacity:.85"></i>',
-    slots:5,
-    cycleMs:6000,
-    render(ctx, W, H, cs, u){
-      const box = inset(W,H);
-      const n = this.slots;
-      const tileH = box.h*0.55;
-      const tileW = tileH * 1.4; // roughly 7:5
-      const gap = box.w * 0.04;
-      const step = tileW + gap;
-      // Each card sweeps across L→R during the cycle. Each is offset.
-      const easedU = easeInOutQuint(u);
-      const travel = (n+1) * step;
-      for(let i=0;i<n;i++){
-        const off = i / n; // start offset 0..1
-        const localU = (easedU + off) % 1;
-        const x = -tileW + localU * (W + tileW);
-        const rot = Math.sin(localU*Math.PI) * 0.10;
-        const y = box.y + (box.h - tileH)/2 + Math.cos(localU*Math.PI*2 - Math.PI) * H*0.06;
-        const dist = Math.abs(x + tileW/2 - W/2)/W;
-        const alpha = 1 - clamp(dist*1.4, 0, 0.8);
-        const cx = x + tileW/2, cy = y + tileH/2;
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.translate(cx,cy); ctx.rotate(rot); ctx.translate(-cx,-cy);
-        drawClip(ctx, cs[i % cs.length], [x, y, tileW, tileH], 1, 1, 0, 0);
-        ctx.restore();
-      }
-    }
-  },
-};
-
 /* ----------------------------- timeline ----------------------------- */
 function computeTotal(){
-  if(state.mode === 'preset'){
-    const preset = presets[state.presetId];
-    const slots = preset.slots;
-    const cycles = Math.max(1, Math.ceil(state.clips.length / slots));
-    const effective = state.presetCycleMs / state.speed;
-    state.totalMs = cycles * effective;
-    $('#time').textContent = `${fmtMs(0)} / ${fmtMs(state.totalMs)}`;
-    return;
-  }
   const layout = layouts[state.templateId];
   let units;
   if(layout.continuous){
@@ -1809,10 +1223,25 @@ function computeTotal(){
   }
   state.totalMs = units * state.perDurMs;
   if(state.totalMs <= 0) state.totalMs = state.perDurMs;
-  $('#time').textContent = `${fmtMs(0)} / ${fmtMs(state.totalMs)}`;
+  renderTimeline();
+  if(typeof updateExportUI === 'function' && $('#exHint')) updateExportUI();
+}
+
+// Timeline: one thumbnail segment per clip, plus a playhead synced in render().
+function renderTimeline(){
+  const segs = $('#tlSegs'); if(!segs) return;
+  segs.innerHTML = state.clips.map(c => `<div class="tl-seg" style="background-image:url('${c.thumb}')"></div>`).join('');
+  $('#time').textContent = fmtMs(state.totalMs);
+}
+function syncTimeline(tMs){
+  const p = state.totalMs ? clamp(tMs / state.totalMs, 0, 1) : 0;
+  $('#tlTrack').style.setProperty('--p', (p*100) + '%');
+  $('#seek').value = String(Math.round(p*1000));
+  $('#tlCur').textContent = fmtMs(tMs);
 }
 
 function render(tMs){
+  syncTimeline(tMs);
   const W=cv.width,H=cv.height;
   ctx.fillStyle = bgColor();
   ctx.fillRect(0,0,W,H);
@@ -1822,22 +1251,6 @@ function render(tMs){
     return;
   }
 
-  // Preset mode: hand off the whole frame to the preset's render fn (normalized u).
-  if(state.mode === 'preset'){
-    const preset = presets[state.presetId];
-    const slots = preset.slots;
-    const effective = state.presetCycleMs / state.speed;
-    const cycleIdx = Math.floor(tMs / effective);
-    const tInCycle = tMs - cycleIdx*effective;
-    const u = clamp(tInCycle / effective, 0, 1);
-    const base = (cycleIdx * slots) % state.clips.length;
-    const cs = [];
-    for(let i=0;i<Math.max(slots, 2);i++){
-      cs.push(state.clips[(base + i) % state.clips.length]);
-    }
-    preset.render(ctx, W, H, cs, u);
-    return;
-  }
 
   const layout = layouts[state.templateId];
 
@@ -1897,7 +1310,9 @@ function render(tMs){
       ctx.closePath();
       ctx.clip();
     }
-    effect.fn(ctx, clip, frame, lt, lphase, tMs, state.perDurMs);
+    const isLast = slot === units-1;
+    const next = (isLast && !state.loop) ? null : state.clips[(idx + chunk) % state.clips.length];
+    effect.fn(ctx, clip, frame, lt, lphase, tMs, state.perDurMs, next);
     ctx.restore();
   }
 }
@@ -1914,7 +1329,6 @@ function tick(){
   }
   state.pausedMs = t;
   $('#seek').value = String(Math.round((t/state.totalMs)*1000));
-  $('#time').textContent = `${fmtMs(t)} / ${fmtMs(state.totalMs)}`;
   render(t);
   rafId = requestAnimationFrame(tick);
 }
@@ -1924,46 +1338,21 @@ function play(){
   state.playing = true;
   state.t0 = performance.now() - state.pausedMs;
   $('#btnPlay').textContent='Pause';
-  $('#btnPlay2').textContent='▮▮';
+  $('#btnPlay2').classList.add('playing');
   rafId = requestAnimationFrame(tick);
 }
 function pause(){
   state.playing = false;
   cancelAnimationFrame(rafId);
   $('#btnPlay').textContent='Play';
-  $('#btnPlay2').textContent='▶';
+  $('#btnPlay2').classList.remove('playing');
 }
 function togglePlay(){ state.playing ? pause() : play(); }
 function restart(){ state.pausedMs = 0; if(state.playing){ state.t0 = performance.now(); } render(0); $('#seek').value=0; }
 
 /* ----------------------------- UI ----------------------------- */
-function renderPresets(){
-  const wrap = $('#presets'); wrap.innerHTML = '';
-  Object.entries(presets).forEach(([id, p]) => {
-    const el = document.createElement('div');
-    el.className = 'preset' + (id === state.presetId ? ' sel' : '');
-    el.innerHTML = `<div class="mini">${p.mini}</div><div class="info"><div class="name">${p.name}</div><div class="desc">${p.desc}</div></div>`;
-    el.onclick = ()=>{
-      state.presetId = id;
-      // Snap duration input to the preset's natural cycleMs.
-      state.presetCycleMs = p.cycleMs;
-      const dEl = $('#presetDur'); if(dEl) dEl.value = p.cycleMs;
-      renderPresets(); computeTotal(); render(state.pausedMs);
-    };
-    wrap.appendChild(el);
-  });
-}
-function renderLayouts(){
-  const wrap = $('#templates'); wrap.innerHTML='';
-  Object.entries(layouts).forEach(([id,t])=>{
-    const el = document.createElement('div');
-    el.className='tpl'+(id===state.templateId?' sel':'');
-    el.innerHTML = `<div class="name">${t.name}</div><div class="desc">${t.desc}</div><div class="mini">${t.mini}</div>`;
-    el.onclick = ()=>{ state.templateId=id; renderLayouts(); computeTotal(); render(state.pausedMs); };
-    wrap.appendChild(el);
-  });
-}
 function renderEffects(){
+  const nm = $('#fxName'); if(nm) nm.textContent = (effects[state.effectId]||effects.none).name;
   const wrap = $('#effects'); wrap.innerHTML='';
   Object.entries(effects).forEach(([id,e])=>{
     const el = document.createElement('div');
@@ -1973,7 +1362,25 @@ function renderEffects(){
     wrap.appendChild(el);
   });
 }
+let clipSeq = 1;
+
+// Reorder the clip list. Manual order is preserved via drag-and-drop, so the
+// other modes are one-shot reorders the user can still tweak afterwards.
+function sortClips(mode){
+  const byName = (a,b) => (a.name||'').localeCompare(b.name||'', undefined, {numeric:true, sensitivity:'base'});
+  if(mode==='az')        state.clips.sort(byName);
+  else if(mode==='za')   state.clips.sort((a,b)=> byName(b,a));
+  else if(mode==='newest') state.clips.sort((a,b)=> (b.addedAt||0)-(a.addedAt||0));
+  else if(mode==='oldest') state.clips.sort((a,b)=> (a.addedAt||0)-(b.addedAt||0));
+  else if(mode==='shuffle') state.clips = _shuffle(state.clips);
+  else return; // 'manual' — leave as-is
+  renderClips();
+  computeTotal();
+  render(state.pausedMs);
+}
+
 function renderClips(){
+  renderTimeline();
   const wrap = $('#clips'); wrap.innerHTML='';
   state.clips.forEach((c,i)=>{
     const row = document.createElement('div');
@@ -2000,6 +1407,7 @@ function renderClips(){
       if(from<0||from===to) return;
       const [moved] = state.clips.splice(from,1);
       state.clips.splice(to,0,moved);
+      const sortSel = $('#sortSel'); if(sortSel) sortSel.value = 'manual';
       renderClips();
       render(state.pausedMs);
     });
@@ -2025,13 +1433,13 @@ async function ingestFiles(fileList){
         await new Promise((res,rej)=>{ v.onloadedmetadata = res; v.onerror = rej; });
         await v.play().catch(()=>{});
         const thumb = await captureThumb(v, v.videoWidth, v.videoHeight);
-        state.clips.push({id:uuid(),name:f.name,type:'video',el:v,w:v.videoWidth,h:v.videoHeight,thumb});
+        state.clips.push({id:uuid(),name:f.name,type:'video',el:v,w:v.videoWidth,h:v.videoHeight,thumb,blob:f,addedAt:clipSeq++});
       }else{
         const img = new Image();
         img.src = url;
         await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; });
         const thumb = await captureThumb(img, img.naturalWidth, img.naturalHeight);
-        state.clips.push({id:uuid(),name:f.name,type:'image',el:img,w:img.naturalWidth,h:img.naturalHeight,thumb});
+        state.clips.push({id:uuid(),name:f.name,type:'image',el:img,w:img.naturalWidth,h:img.naturalHeight,thumb,blob:f,addedAt:clipSeq++});
       }
     }catch(e){ console.warn('skip',f.name,e); }
   }
@@ -2079,25 +1487,21 @@ function _shuffle(arr){
   return a;
 }
 
-// Randomize the whole showreel: preset, timing, fit, padding, gap, and
+// Randomize the whole showreel: layout, effect, timing, fit, padding, gap, and
 // shuffle clip order. If only demo clips are loaded, also pulls in a fresh
 // set of Picsum photos so the visual content rotates too.
 async function inspireMe(){
   const btn = $('#inspireBtn'); if(btn){ btn.classList.add('spin'); setTimeout(()=>btn.classList.remove('spin'), 650); }
 
-  // Random preset
-  const presetIds = Object.keys(presets);
-  state.presetId = _rand(presetIds);
-  state.mode = 'preset';
-  // Random cycle duration (snapped to 100ms), weighted around 2–4s.
-  const base = 1800 + Math.random() * 4200;
-  state.presetCycleMs = Math.round(base / 100) * 100;
-  // Random speed (1× is most common).
-  state.speed = _rand([0.5, 0.75, 1, 1, 1, 1.5, 2]);
+  // Random layout + effect
+  state.effectId = _rand(Object.keys(effects).filter(k => k !== 'none'));
+  // Random timing (snapped to 100ms / 50ms), weighted around 2–3s per clip.
+  state.perDurMs = Math.round((1600 + Math.random() * 2200) / 100) * 100;
+  state.transMs = Math.round((300 + Math.random() * 600) / 50) * 50;
   // Random fit & framing (cover is most common — looks best for nature shots).
   state.fit = _rand(['cover','cover','cover','contain']);
   state.paddingPct = _rand([0, 0, 4, 6, 8, 12]);
-  state.gapPct = _rand([0, 1, 1.5, 2, 3]);
+  state.radiusPct = _rand([0, 1, 2, 2, 4, 6]);
   // Background tone shuffle
   state.bgMode = _rand(['dark','dark','dark','light']);
 
@@ -2110,17 +1514,7 @@ async function inspireMe(){
     renderClips();
   }
 
-  // Sync all UI controls to the new state.
-  $$('#modeTabs button').forEach(b => b.classList.toggle('sel', b.dataset.v === state.mode));
-  $('#presetPanel').hidden = state.mode !== 'preset';
-  $('#customPanel').hidden = state.mode !== 'custom';
-  const dEl = $('#presetDur'); if(dEl) dEl.value = state.presetCycleMs;
-  $$('#speed button').forEach(b => b.classList.toggle('sel', parseFloat(b.dataset.v) === state.speed));
-  $$('#fit button').forEach(b => b.classList.toggle('sel', b.dataset.v === state.fit));
-  $$('#bgmode button').forEach(b => b.classList.toggle('sel', b.dataset.v === state.bgMode));
-  $('#padding').value = state.paddingPct;
-  $('#gap').value = state.gapPct;
-  renderPresets();
+  syncAllControls();
   computeTotal();
   state.pausedMs = 0;
   $('#seek').value = 0;
@@ -2147,6 +1541,7 @@ async function loadDemoClips(count = 6){
       w: img.naturalWidth, h: img.naturalHeight,
       thumb,
       isDemo: true,
+      addedAt: clipSeq++,
     });
   }
   rebuildScaledCache();
@@ -2156,19 +1551,245 @@ async function loadDemoClips(count = 6){
   setStatus('', false);
 }
 
+/* ----------------------------- saved work (IndexedDB) -----------------------------
+   Compositions (clips + every setting) are stored locally in IndexedDB so the
+   user can reopen a past project and re-export it any time — even offline. */
+const Store = (function(){
+  const NAME='showreel-db', STORE='compositions', VER=1;
+  let dbp;
+  function open(){
+    if(dbp) return dbp;
+    dbp = new Promise((res,rej)=>{
+      const req = indexedDB.open(NAME, VER);
+      req.onupgradeneeded = ()=>{
+        const db = req.result;
+        if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, {keyPath:'id'});
+      };
+      req.onsuccess = ()=>res(req.result);
+      req.onerror = ()=>rej(req.error);
+    });
+    return dbp;
+  }
+  function run(mode, fn){
+    return open().then(db => new Promise((res,rej)=>{
+      const t = db.transaction(STORE, mode);
+      const st = t.objectStore(STORE);
+      const r = fn(st);
+      r.onsuccess = ()=>res(r.result);
+      r.onerror = ()=>rej(r.error);
+    }));
+  }
+  return {
+    put: rec => run('readwrite', st => st.put(rec)),
+    get: id  => run('readonly',  st => st.get(id)),
+    all: ()  => run('readonly',  st => st.getAll()),
+    del: id  => run('readwrite', st => st.delete(id)),
+  };
+})();
+
+const SETTINGS_KEYS = ['templateId','effectId','aspect','bgMode','quality','fit',
+  'paddingPct','radiusPct','perDurMs','transMs','loop','fps','exFormat','exQuality','gifRes'];
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function setToggle(id, val){
+  $$(`#${id} button`).forEach(b => b.classList.toggle('sel', b.dataset.v === String(val)));
+}
+
+// Push the full state back onto every UI control (used after loading a project).
+function syncAllControls(){
+  state.mode = 'custom';
+  if(!effects[state.effectId]) state.effectId = 'fade';
+  state.templateId = 'single';   // layout picker removed — always full frame
+  if(state.radiusPct == null) state.radiusPct = 2;
+  if(state.exFormat !== 'gif') state.exFormat = 'mp4';
+  setToggle('aspect', state.aspect);
+  setToggle('bgmode', state.bgMode);
+  setToggle('fit', state.fit);
+  setToggle('quality', state.quality);
+  setToggle('exFmt', state.exFormat);
+  setToggle('exQuality', state.exQuality);
+  setToggle('gifRes', state.gifRes);
+  setToggle('fpsSel', state.fps);
+  $('#loop').checked = !!state.loop;
+  SLIDERS.forEach(syncSlider);
+  updateExportUI();
+  renderEffects();
+}
+
+// Get a storable Blob for a clip — prefer the original source, else re-encode.
+async function clipToBlob(clip){
+  if(clip.blob) return clip.blob;
+  if(clip.type === 'image' && clip.el){
+    const c = document.createElement('canvas');
+    c.width = clip.w; c.height = clip.h;
+    c.getContext('2d').drawImage(clip.el, 0, 0, clip.w, clip.h);
+    return await new Promise(r => c.toBlob(r, 'image/png'));
+  }
+  return null;
+}
+
+function defaultProjName(){
+  const d = new Date();
+  return 'Showreel ' + d.toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+async function saveComposition(){
+  if(state.clips.length === 0){ alert('Add some designs before saving.'); return; }
+  // Don't persist the throwaway inspiration photos unless that's all there is.
+  const real = state.clips.filter(c => !c.isDemo);
+  const useClips = real.length ? real : state.clips;
+  const name = (prompt('Name this composition', defaultProjName()) || '').trim();
+  if(!name) return;
+
+  setStatus('Saving…');
+  try{
+    const clips = [];
+    for(const c of useClips){
+      const blob = await clipToBlob(c);
+      if(!blob) continue;
+      clips.push({id:c.id, name:c.name, type:c.type, w:c.w, h:c.h, thumb:c.thumb, blob});
+    }
+    if(!clips.length){ setStatus('', false); alert('Nothing could be saved from this composition.'); return; }
+    const settings = {};
+    SETTINGS_KEYS.forEach(k => settings[k] = state[k]);
+    let preview = null;
+    try{ preview = cv.toDataURL('image/jpeg', 0.6); }catch(e){ /* tainted canvas — skip */ }
+    await Store.put({ id: uuid(), name, createdAt: Date.now(), count: clips.length, settings, clips, preview });
+    await renderProjects();
+    setStatus('', false);
+    audio.play('success');
+  }catch(err){
+    console.error(err);
+    setStatus('', false);
+    alert('Could not save: ' + (err && err.message ? err.message : err));
+  }
+}
+
+async function loadComposition(id){
+  let rec;
+  try{ rec = await Store.get(id); }catch(e){ console.error(e); }
+  if(!rec){ alert('That saved work could not be found.'); return; }
+  pause();
+  setStatus('Loading saved work…');
+  try{
+    const clips = [];
+    for(const cr of rec.clips){
+      const url = URL.createObjectURL(cr.blob);
+      if(cr.type === 'video'){
+        const v = document.createElement('video');
+        v.src = url; v.muted = true; v.loop = true; v.playsInline = true;
+        await new Promise(res => { v.onloadedmetadata = res; v.onerror = res; });
+        await v.play().catch(()=>{});
+        clips.push({id:cr.id||uuid(), name:cr.name, type:'video', el:v, w:cr.w||v.videoWidth, h:cr.h||v.videoHeight, thumb:cr.thumb, blob:cr.blob, addedAt:clipSeq++});
+      }else{
+        const img = new Image();
+        img.src = url;
+        await new Promise(res => { img.onload = res; img.onerror = res; });
+        clips.push({id:cr.id||uuid(), name:cr.name, type:'image', el:img, w:cr.w||img.naturalWidth, h:cr.h||img.naturalHeight, thumb:cr.thumb, blob:cr.blob, addedAt:clipSeq++});
+      }
+    }
+    state.clips = clips;
+    Object.assign(state, rec.settings || {});
+    applyAspect();          // resets canvas resolution + rebuilds the scaled cache
+    syncAllControls();
+    renderClips();
+    computeTotal();
+    state.pausedMs = 0;
+    $('#seek').value = 0;
+    render(0);
+    setStatus('', false);
+    audio.play('pop');
+  }catch(err){
+    console.error(err);
+    setStatus('', false);
+    alert('Could not open that composition: ' + (err && err.message ? err.message : err));
+  }
+}
+
+async function deleteComposition(id){
+  if(!confirm('Delete this saved composition? This cannot be undone.')) return;
+  try{ await Store.del(id); }catch(e){ console.error(e); }
+  renderProjects();
+}
+
+async function renderProjects(){
+  const wrap = $('#projList'); if(!wrap) return;
+  let recs = [];
+  try{ recs = await Store.all(); }catch(e){ console.warn('saved work unavailable', e); }
+  recs.sort((a,b) => b.createdAt - a.createdAt);
+  if(!recs.length){
+    wrap.innerHTML = '<div class="hint" style="margin-top:0">No saved work yet — save a composition to reopen and re-export it later, even offline.</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  for(const r of recs){
+    const when = new Date(r.createdAt).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+    const cover = r.preview || (r.clips[0] && r.clips[0].thumb) || '';
+    const row = document.createElement('div');
+    row.className = 'proj';
+    row.innerHTML = `
+      <img class="thumb" src="${cover}" alt="" />
+      <div class="meta">
+        <div class="nm"><span>${escapeHtml(r.name)}</span></div>
+        <div class="sm">${r.count || r.clips.length} clip${(r.count||r.clips.length)===1?'':'s'} · ${when}</div>
+      </div>
+      <div class="acts">
+        <button class="btn ghost open" title="Open in editor">Open</button>
+        <button class="x del" title="Delete">×</button>
+      </div>`;
+    row.querySelector('.open').onclick = () => loadComposition(r.id);
+    row.querySelector('.del').onclick = () => deleteComposition(r.id);
+    wrap.appendChild(row);
+  }
+}
+
 /* ----------------------------- export ----------------------------- */
-async function exportWebM(){
+function downloadBlob(blob, ext){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `showreel-${state.aspect.replace(':','x')}-${Date.now()}.${ext}`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+
+function exportFormat(){ return state.exFormat === 'gif' ? 'gif' : 'mp4'; }
+
+// Dispatch based on the chosen format.
+async function exportShowreel(){
   if(state.clips.length===0){ alert('Add some designs first.'); return; }
+  const fmt = exportFormat();
+  try{
+    if(fmt==='gif') await exportGIF();
+    else await exportVideo(fmt);
+  }catch(err){
+    console.error(err);
+    setStatus('', false);
+    alert('Export failed: ' + (err && err.message ? err.message : err));
+  }
+}
+
+// WebM / MP4 via MediaRecorder + canvas stream (real-time paced).
+async function exportVideo(fmt){
   pause();
   computeTotal();
-  const fps = clamp(parseInt($('#fps').value)||60,24,60);
-  const br  = clamp(parseInt($('#br').value)||20,2,80);
+  const {fps, mbps: br} = exportSpec();
+
+  const candidates = fmt==='mp4'
+    ? ['video/mp4;codecs=h264','video/mp4;codecs=avc1.42E01E','video/mp4']
+    : ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  let mime = candidates.find(m => MediaRecorder.isTypeSupported(m));
+  if(!mime){
+    if(fmt==='mp4'){
+      alert('MP4 recording isn’t supported in this browser — exporting WebM instead. (Tip: Safari supports MP4 export.)');
+      return exportVideo('webm');
+    }
+    mime = 'video/webm';
+  }
+  const ext = mime.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
   setStatus('Exporting…');
 
   const stream = cv.captureStream(fps);
-  let mime = 'video/webm;codecs=vp9';
-  if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm;codecs=vp8';
-  if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm';
   const rec = new MediaRecorder(stream, {mimeType:mime, videoBitsPerSecond: br*1_000_000});
   const chunks = [];
   rec.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
@@ -2187,15 +1808,250 @@ async function exportWebM(){
   rec.stop();
   await done;
   const blob = new Blob(chunks, {type: mime});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `showreel-${state.aspect.replace(':','x')}-${Date.now()}.webm`;
-  document.body.appendChild(a); a.click(); a.remove();
+  downloadBlob(blob, ext);
   setStatus('', false);
   audio.play('success');
 }
 
+// Animated GIF via a self-contained encoder (no external deps, works offline).
+async function exportGIF(){
+  pause();
+  computeTotal();
+  setStatus('Rendering GIF…');
+
+  const {fps, w: gw, h: gh} = exportSpec();
+  const step = 1000/fps;
+
+  const tmp = document.createElement('canvas');
+  tmp.width = gw; tmp.height = gh;
+  const tctx = tmp.getContext('2d', {willReadFrequently:true});
+  tctx.imageSmoothingEnabled = true; tctx.imageSmoothingQuality = 'high';
+
+  const totalMs = state.totalMs;
+  const frames = [];
+  for(let t=0; t<=totalMs+1; t+=step){
+    render(t);
+    tctx.clearRect(0,0,gw,gh);
+    tctx.drawImage(cv, 0,0, gw,gh);
+    frames.push(tctx.getImageData(0,0,gw,gh).data);
+    setStatus(`Rendering GIF… ${Math.min(99, Math.round(t/totalMs*60))}%`);
+    await new Promise(r=>requestAnimationFrame(r));
+  }
+
+  setStatus('Encoding GIF…');
+  await new Promise(r=>setTimeout(r,20));       // let the status paint
+  const bytes = GifEncoder.encode(frames, gw, gh, step);
+  const blob = new Blob([bytes], {type:'image/gif'});
+  downloadBlob(blob, 'gif');
+  setStatus('', false);
+  audio.play('success');
+}
+
+/* ----- self-contained GIF encoder: median-cut palette + GIF-LZW ----- */
+const GifEncoder = (function(){
+  // Build a <=256 color palette from flat [r,g,b,...] samples via median cut.
+  function medianCut(samples, maxColors){
+    const n = samples.length/3;
+    const idx = new Uint32Array(n);
+    for(let i=0;i<n;i++) idx[i]=i;
+    function rangeOf(lo,hi){
+      let rmin=255,rmax=0,gmin=255,gmax=0,bmin=255,bmax=0;
+      for(let i=lo;i<hi;i++){
+        const p=idx[i]*3, r=samples[p], g=samples[p+1], b=samples[p+2];
+        if(r<rmin)rmin=r; if(r>rmax)rmax=r;
+        if(g<gmin)gmin=g; if(g>gmax)gmax=g;
+        if(b<bmin)bmin=b; if(b>bmax)bmax=b;
+      }
+      return [rmax-rmin, gmax-gmin, bmax-bmin];
+    }
+    const boxes = [{lo:0, hi:n, range:rangeOf(0,n)}];
+    while(boxes.length < maxColors){
+      let bi=-1, best=-1;
+      for(let i=0;i<boxes.length;i++){
+        const b=boxes[i];
+        if(b.hi-b.lo<=1) continue;
+        const mr=Math.max(b.range[0],b.range[1],b.range[2]);
+        if(mr>best){ best=mr; bi=i; }
+      }
+      if(bi<0) break;
+      const b=boxes[bi];
+      const ch = (b.range[0]>=b.range[1] && b.range[0]>=b.range[2]) ? 0
+               : (b.range[1]>=b.range[2] ? 1 : 2);
+      const sub = Array.prototype.slice.call(idx.subarray(b.lo, b.hi));
+      sub.sort((a,c)=> samples[a*3+ch] - samples[c*3+ch]);
+      for(let i=0;i<sub.length;i++) idx[b.lo+i]=sub[i];
+      const mid=(b.lo+b.hi)>>1;
+      const b1={lo:b.lo, hi:mid}, b2={lo:mid, hi:b.hi};
+      b1.range=rangeOf(b1.lo,b1.hi); b2.range=rangeOf(b2.lo,b2.hi);
+      boxes.splice(bi,1,b1,b2);
+    }
+    const palette=[];
+    for(const b of boxes){
+      let r=0,g=0,bl=0; const cnt=Math.max(1,b.hi-b.lo);
+      for(let i=b.lo;i<b.hi;i++){ const p=idx[i]*3; r+=samples[p]; g+=samples[p+1]; bl+=samples[p+2]; }
+      palette.push([Math.round(r/cnt), Math.round(g/cnt), Math.round(bl/cnt)]);
+    }
+    while(palette.length<2) palette.push([0,0,0]);
+    return palette;
+  }
+
+  // GIF variable-width LZW. Returns image-data sub-blocks incl. terminator.
+  function lzwEncode(minCodeSize, indices){
+    const clear = 1<<minCodeSize;
+    const eoi = clear+1;
+    let codeSize = minCodeSize+1;
+    let dict = new Map();
+    let next = clear+2;
+    function reset(){ dict=new Map(); next=clear+2; codeSize=minCodeSize+1; }
+
+    const out=[]; let block=[]; let cur=0, curBits=0;
+    function flushBlock(){ if(block.length){ out.push(block.length); for(let i=0;i<block.length;i++) out.push(block[i]); block=[]; } }
+    function writeByte(byte){ block.push(byte); if(block.length===255) flushBlock(); }
+    function emit(code){
+      cur |= code << curBits; curBits += codeSize;
+      while(curBits>=8){ writeByte(cur & 0xff); cur >>>= 8; curBits -= 8; }
+    }
+
+    emit(clear);
+    let prefix = indices[0];
+    for(let i=1;i<indices.length;i++){
+      const k = indices[i];
+      const key = prefix*256 + k;
+      if(dict.has(key)){
+        prefix = dict.get(key);
+      } else {
+        emit(prefix);
+        if(next < 4096){
+          dict.set(key, next);
+          next++;
+          if(next === (1<<codeSize) && codeSize<12) codeSize++;
+        } else {
+          emit(clear);
+          reset();
+        }
+        prefix = k;
+      }
+    }
+    emit(prefix);
+    emit(eoi);
+    if(curBits>0) writeByte(cur & 0xff);
+    flushBlock();
+    out.push(0); // block terminator
+    return out;
+  }
+
+  function quantize(frames, w, h){
+    const totalPx = w*h*frames.length;
+    const target = 24000;
+    const stride = Math.max(1, Math.floor(totalPx/target));
+    const samples=[]; let c=0;
+    for(const f of frames){
+      for(let p=0;p<f.length;p+=4){
+        if((c++ % stride)===0){ samples.push(f[p], f[p+1], f[p+2]); }
+      }
+    }
+    const palette = medianCut(new Uint8Array(samples), 256);
+    const cache = new Int16Array(32768).fill(-1);
+    function nearest(r,g,b){
+      const key = ((r>>3)<<10)|((g>>3)<<5)|(b>>3);
+      const cached = cache[key];
+      if(cached>=0) return cached;
+      let bi=0, bd=1e9;
+      for(let i=0;i<palette.length;i++){
+        const dr=r-palette[i][0], dg=g-palette[i][1], db=b-palette[i][2];
+        const d=dr*dr+dg*dg+db*db;
+        if(d<bd){ bd=d; bi=i; }
+      }
+      cache[key]=bi; return bi;
+    }
+    return {palette, nearest};
+  }
+
+  function encode(frames, w, h, delayMs){
+    const {palette, nearest} = quantize(frames, w, h);
+    const minCodeSize = 8;
+    const bytes = [];
+    const push = (...a)=>{ for(let i=0;i<a.length;i++) bytes.push(a[i]); };
+    const pushStr = s => { for(let i=0;i<s.length;i++) bytes.push(s.charCodeAt(i)); };
+
+    pushStr('GIF89a');
+    push(w&255,(w>>8)&255, h&255,(h>>8)&255);  // logical screen size
+    push(0xF7, 0, 0);                            // global table, 256 colors, bg, aspect
+    for(let i=0;i<256;i++){ const c=palette[i]||[0,0,0]; push(c[0],c[1],c[2]); }
+    push(0x21,0xFF,0x0B); pushStr('NETSCAPE2.0'); push(0x03,0x01,0x00,0x00,0x00); // loop forever
+
+    const delay = Math.max(2, Math.round(delayMs/10)); // centiseconds
+    for(const f of frames){
+      push(0x21,0xF9,0x04, 0x00, delay&255,(delay>>8)&255, 0x00, 0x00); // graphic control
+      push(0x2C, 0,0,0,0, w&255,(w>>8)&255, h&255,(h>>8)&255, 0x00);    // image descriptor
+      const indices = new Uint8Array(w*h);
+      for(let p=0,q=0;p<f.length;p+=4,q++){ indices[q]=nearest(f[p],f[p+1],f[p+2]); }
+      push(minCodeSize);
+      const lzw = lzwEncode(minCodeSize, indices);
+      for(let i=0;i<lzw.length;i++) bytes.push(lzw[i]);
+    }
+    push(0x3B);
+    return new Uint8Array(bytes);
+  }
+
+  return { encode };
+})();
+
 /* ----------------------------- wiring ----------------------------- */
+/* ----------------------------- controls ----------------------------- */
+const SLIDERS = [
+  {id:'dur',     key:'perDurMs',   fmt: v => (v/1000).toFixed(1), unit:'s'},
+  {id:'trans',   key:'transMs',    fmt: v => String(v),           unit:'ms'},
+  {id:'padding', key:'paddingPct', fmt: v => String(v),           unit:'%'},
+  {id:'radius',  key:'radiusPct',  fmt: v => String(v),           unit:'%'},
+];
+function syncSlider(sl){
+  const el = $('#'+sl.id);
+  el.value = state[sl.key];
+  const pct = (el.value - el.min) / (el.max - el.min) * 100;
+  el.parentElement.style.setProperty('--p', pct + '%');
+  $('#'+sl.id+'Val').textContent = sl.fmt(+el.value);
+  $('#'+sl.id+'Unit').textContent = sl.unit;
+}
+// A transition can take at most half a clip (one in, one out).
+function clampTransition(){
+  const max = Math.floor(state.perDurMs / 2 / 50) * 50;
+  if(state.transMs > max){ state.transMs = max; syncSlider(SLIDERS[1]); }
+}
+function bindToggle(id, fn){
+  $('#'+id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    setToggle(id, b.dataset.v);
+    fn(b.dataset.v);
+    updateExportUI();
+  });
+}
+
+/* Export settings → concrete numbers. Quality scales bitrate for MP4 and
+   frame rate for GIF; GIF resolution is the short side in px. */
+const RES_LABEL = {hd:'720p', fhd:'1080p', qhd:'1440p', uhd:'4K'};
+const BASE_MBPS = {hd:8, fhd:16, qhd:28, uhd:45};
+const QUALITY_MULT = {low:0.5, medium:1, high:1.75};
+const GIF_FPS = {low:10, medium:15, high:24};
+function exportSpec(){
+  if(state.exFormat === 'gif'){
+    const short = Math.min(cv.width, cv.height);
+    const scale = Math.min(1, state.gifRes / short);
+    return { fmt:'gif', w: Math.round(cv.width*scale), h: Math.round(cv.height*scale), fps: GIF_FPS[state.exQuality] || 15 };
+  }
+  const mbps = Math.round(BASE_MBPS[state.quality] * (QUALITY_MULT[state.exQuality] || 1) * (state.fps > 30 ? 1.25 : 1));
+  return { fmt:'mp4', w: cv.width, h: cv.height, fps: state.fps, mbps: Math.min(mbps, 100) };
+}
+function updateExportUI(){
+  const isGif = state.exFormat === 'gif';
+  $$('.export [data-for]').forEach(el => { el.hidden = el.dataset.for !== state.exFormat; });
+  const sp = exportSpec();
+  const secs = (state.totalMs/1000).toFixed(1);
+  $('#exHint').innerHTML = isGif
+    ? `<b>${sp.w}×${sp.h}</b> · ${sp.fps} fps · ${secs}s<br>256-color GIF. Larger sizes take longer to encode.`
+    : `<b>${sp.w}×${sp.h}</b> · ${sp.fps} fps · ~${sp.mbps} Mbps · ${secs}s<br>H.264 MP4. Falls back to WebM if this browser can't record MP4.`;
+}
+
 function wire(){
   const drop = $('#drop'), file = $('#file');
   drop.addEventListener('click', ()=> file.click());
@@ -2212,8 +2068,24 @@ function wire(){
 
   $('#btnPlay').onclick = togglePlay;
   $('#btnPlay2').onclick = togglePlay;
-  $('#btnExport').onclick = exportWebM;
+  $('#btnExport').onclick = exportShowreel;
+  const sideExport = $('#btnExportSide'); if(sideExport) sideExport.onclick = exportShowreel;
+  const saveBtn = $('#btnSave'); if(saveBtn) saveBtn.onclick = saveComposition;
+  const sortSel = $('#sortSel'); if(sortSel) sortSel.onchange = () => sortClips(sortSel.value);
+  // Export option toggles
+  bindToggle('exFmt', v => { state.exFormat = v; });
+  bindToggle('quality', v => { state.quality = v; applyAspect(); render(state.pausedMs); });
+  bindToggle('gifRes', v => { state.gifRes = +v; });
+  bindToggle('exQuality', v => { state.exQuality = v; });
+  bindToggle('fpsSel', v => { state.fps = +v; });
   $('#inspireBtn').onclick = inspireMe;
+  setToggle('themeSeg', document.documentElement.dataset.themeMode);
+  $('#themeSeg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    applyTheme(b.dataset.v);
+    setToggle('themeSeg', b.dataset.v);
+    try{ localStorage.setItem('showreel-theme', b.dataset.v); }catch(err){}
+  });
   $('#btnSound').onclick = () => { audio.setMuted(!audio.muted); };
   // Initialize the mute button's visual state and play a tiny "boot" tone so
   // users immediately know sounds are on.
@@ -2232,22 +2104,20 @@ function wire(){
     state.pausedMs = t;
     if(state.playing) state.t0 = performance.now() - t;
     render(t);
-    $('#time').textContent = `${fmtMs(t)} / ${fmtMs(state.totalMs)}`;
-  };
+    };
 
-  $('#dur').onchange = e=>{
-    state.perDurMs = clamp(parseInt(e.target.value)||2000, 100, 60000);
-    e.target.value = state.perDurMs;
-    computeTotal(); render(state.pausedMs);
-  };
-  $('#trans').onchange = e=>{
-    state.transMs = clamp(parseInt(e.target.value)||0, 0, 5000);
-    e.target.value = state.transMs;
-    render(state.pausedMs);
-  };
+  SLIDERS.forEach(sl => {
+    const el = $('#'+sl.id);
+    el.addEventListener('input', () => {
+      state[sl.key] = +el.value;
+      syncSlider(sl);
+      if(sl.key === 'perDurMs' || sl.key === 'transMs') clampTransition();
+      if(sl.key === 'perDurMs') computeTotal();
+      render(state.pausedMs);
+      if(sl.key === 'perDurMs' || sl.key === 'transMs') updateExportUI();
+    });
+  });
   $('#loop').onchange = e=>{ state.loop = e.target.checked; };
-  $('#fps').onchange = e=>{ state.fps = +e.target.value||30; };
-  $('#br').onchange  = e=>{ state.br = +e.target.value||8; };
 
   $('#aspect').addEventListener('click', e=>{
     const b = e.target.closest('button'); if(!b) return;
@@ -2264,55 +2134,11 @@ function wire(){
     state.bgMode = b.dataset.v;
     render(state.pausedMs);
   });
-  $('#presetDur').onchange = e=>{
-    state.presetCycleMs = clamp(parseInt(e.target.value)||2800, 500, 30000);
-    e.target.value = state.presetCycleMs;
-    computeTotal(); render(state.pausedMs);
-  };
-  $('#speed').addEventListener('click', e=>{
-    const b = e.target.closest('button'); if(!b) return;
-    $$('#speed button').forEach(x=>x.classList.remove('sel'));
-    b.classList.add('sel');
-    state.speed = parseFloat(b.dataset.v) || 1;
-    computeTotal(); render(state.pausedMs);
-  });
-  $('#modeTabs').addEventListener('click', e=>{
-    const b = e.target.closest('button'); if(!b) return;
-    $$('#modeTabs button').forEach(x=>x.classList.remove('sel'));
-    b.classList.add('sel');
-    state.mode = b.dataset.v;
-    $('#presetPanel').hidden = state.mode !== 'preset';
-    $('#customPanel').hidden = state.mode !== 'custom';
-    computeTotal();
-    render(state.pausedMs);
-  });
-  $('#padding').onchange = e=>{
-    state.paddingPct = clamp(parseFloat(e.target.value)||0, 0, 20);
-    e.target.value = state.paddingPct;
-    render(state.pausedMs);
-  };
-  $('#gap').onchange = e=>{
-    state.gapPct = clamp(parseFloat(e.target.value)||0, 0, 6);
-    e.target.value = state.gapPct;
-    render(state.pausedMs);
-  };
   $('#fit').addEventListener('click', e=>{
     const b = e.target.closest('button'); if(!b) return;
     $$('#fit button').forEach(x=>x.classList.remove('sel'));
     b.classList.add('sel');
     state.fit = b.dataset.v;
-    render(state.pausedMs);
-  });
-  $('#quality').addEventListener('click', e=>{
-    const b = e.target.closest('button'); if(!b) return;
-    $$('#quality button').forEach(x=>x.classList.remove('sel'));
-    b.classList.add('sel');
-    state.quality = b.dataset.v;
-    // Auto-pick a sane default bitrate for the new resolution.
-    const brDefaults = {hd:8, fhd:20, qhd:35, uhd:60};
-    state.br = brDefaults[state.quality];
-    $('#br').value = state.br;
-    applyAspect();
     render(state.pausedMs);
   });
 
@@ -2367,12 +2193,12 @@ function wire(){
 
 /* ----------------------------- init ----------------------------- */
 applyAspect();
-renderPresets();
-renderLayouts();
 renderEffects();
 computeTotal();
 render(0);
 wire();
+syncAllControls();
+renderProjects();
 
 // Inspiration: render and queue up 6 demo "designs" so the canvas isn't empty
 // on first load. They auto-clear the moment the user drops their own files.
