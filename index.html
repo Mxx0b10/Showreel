@@ -201,6 +201,16 @@
   .sc-val{flex:1;color:var(--text)}
   .sc-unit{color:var(--muted);font-size:11px}
   .scrub input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;z-index:2}
+  /* background swatches */
+  .swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .sw{position:relative;aspect-ratio:1;border-radius:8px;border:0;padding:0;cursor:pointer;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(127,127,127,.28);transition:transform .12s}
+  .sw:hover{transform:scale(1.06)}
+  .sw.sel{box-shadow:inset 0 0 0 1px rgba(127,127,127,.28),0 0 0 2px var(--card),0 0 0 3.5px var(--accent)}
+  .sw .blurimg{position:absolute;inset:-6px;background:var(--field-fill) center/cover;filter:blur(4px) saturate(1.2)}
+  .sw .lbl{position:absolute;inset:0;display:grid;place-items:center;font-size:9px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);letter-spacing:.02em}
+  .sw.custom{background:conic-gradient(from 0deg,#f43f5e,#f59e0b,#84cc16,#06b6d4,#6366f1,#d946ef,#f43f5e)}
+  .sw.custom .dot{position:absolute;inset:7px;border-radius:5px;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
+  .sw.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
   /* theme switch */
   .themeSeg{display:flex;background:var(--field);border-radius:8px;padding:2px;gap:2px;margin-right:4px}
   .themeSeg button{width:28px;height:24px;display:grid;place-items:center;border:0;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer}
@@ -382,6 +392,24 @@
         </div>
       </div>
       <div class="prop">
+        <label for="shadow">Shadow</label>
+        <div class="scrub">
+          <span class="sc-ic"><svg viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M13.5 5.5v6a2 2 0 0 1-2 2h-6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".55"/></svg></span>
+          <span class="sc-val" id="shadowVal"></span>
+          <span class="sc-unit" id="shadowUnit"></span>
+          <input id="shadow" type="range" min="0" max="100" step="1" aria-label="Shadow" />
+        </div>
+      </div>
+      <div class="prop">
+        <label for="shadowBlur">Softness</label>
+        <div class="scrub">
+          <span class="sc-ic"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3" stroke-dasharray="1.6 1.6"/><circle cx="8" cy="8" r="2.4" fill="currentColor" opacity=".55"/></svg></span>
+          <span class="sc-val" id="shadowBlurVal"></span>
+          <span class="sc-unit" id="shadowBlurUnit"></span>
+          <input id="shadowBlur" type="range" min="0" max="100" step="1" aria-label="Softness" />
+        </div>
+      </div>
+      <div class="prop">
         <label>Aspect</label>
         <div class="toggle" id="aspect"><button data-v="16:9" class="sel">16:9</button><button data-v="1:1">1:1</button><button data-v="9:16">9:16</button></div>
       </div>
@@ -389,10 +417,11 @@
         <label>Image fit</label>
         <div class="toggle" id="fit"><button data-v="cover" class="sel">Cover</button><button data-v="contain">Contain</button><button data-v="fill">Fill</button></div>
       </div>
-      <div class="prop">
-        <label>Background</label>
-        <div class="toggle" id="bgmode"><button data-v="dark" class="sel">Dark</button><button data-v="light">Light</button></div>
-      </div>
+    </section>
+
+    <section class="sec">
+      <h3>Background <span class="cur" id="bgName"></span></h3>
+      <div class="swatches" id="bgSwatches"></div>
     </section>
 
     <section class="sec export">
@@ -446,6 +475,10 @@ const state = {
   fit: 'cover',
   paddingPct: 6,
   radiusPct: 2,
+  shadowPct: 30,
+  shadowBlur: 50,
+  bgId: 'ink',
+  bgCustom: '#2b2d42',
   gapPct: 1.5,
   perDurMs: 2000,
   transMs: 400,
@@ -494,7 +527,79 @@ function setStatus(msg, show=true){
   const el = $('#status'); $('#statusText').textContent = msg||'';
   el.classList.toggle('show', !!show);
 }
-function bgColor(){ return state.bgMode==='dark' ? '#0a0a0b' : '#f5f5f3'; }
+/* Backgrounds: solid, gradient, blurred current shot, or a custom colour.
+   `tone` drives letterbox fills and placeholder colours (state.bgMode). */
+const BACKGROUNDS = {
+  ink:      {name:'Ink',      type:'solid', colors:['#0a0a0b'], tone:'dark'},
+  graphite: {name:'Graphite', type:'solid', colors:['#1f2024'], tone:'dark'},
+  paper:    {name:'Paper',    type:'solid', colors:['#f5f5f3'], tone:'light'},
+  white:    {name:'White',    type:'solid', colors:['#ffffff'], tone:'light'},
+  sand:     {name:'Sand',     type:'solid', colors:['#ede4d3'], tone:'light'},
+  blur:     {name:'Blur',     type:'blur',  colors:['#111'],    tone:'dark'},
+  dusk:     {name:'Dusk',     type:'gradient', colors:['#1e1b4b','#6d28d9','#f472b6'], tone:'dark'},
+  ocean:    {name:'Ocean',    type:'gradient', colors:['#0b1220','#0e7490','#5eead4'], tone:'dark'},
+  ember:    {name:'Ember',    type:'gradient', colors:['#1c0a00','#c2410c','#fbbf24'], tone:'dark'},
+  mint:     {name:'Mint',     type:'gradient', colors:['#ecfdf5','#a7f3d0','#bae6fd'], tone:'light'},
+  peach:    {name:'Peach',    type:'gradient', colors:['#fff7ed','#fecaca','#f9a8d4'], tone:'light'},
+  custom:   {name:'Custom',   type:'solid', colors:null, tone:null},
+};
+function hexTone(hex){
+  const n = parseInt(hex.slice(1), 16), r = n>>16 & 255, g = n>>8 & 255, b = n & 255;
+  return (0.299*r + 0.587*g + 0.114*b) > 150 ? 'light' : 'dark';
+}
+function currentBg(){
+  const b = BACKGROUNDS[state.bgId] || BACKGROUNDS.ink;
+  if(state.bgId === 'custom') return {...b, colors:[state.bgCustom], tone:hexTone(state.bgCustom)};
+  return b;
+}
+// Cheap blur: draw the shot cover-fit into a tiny blurred canvas, then upscale.
+const blurCache = new WeakMap();
+function blurredShot(clip, W, H){
+  if(!clip || !clip.el) return null;
+  const sw = 96, sh = Math.max(1, Math.round(96*H/W)), key = sw+'x'+sh;
+  const isVideo = clip.type === 'video';
+  let m = blurCache.get(clip.el);
+  if(!isVideo && m && m[key]) return m[key];
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh;
+  const g = c.getContext('2d');
+  g.filter = 'blur(3px) saturate(1.25)';
+  const ar = clip.w/clip.h, br = sw/sh, pad = 8;
+  let dw, dh;
+  if(ar > br){ dh = sh + pad*2; dw = dh*ar; } else { dw = sw + pad*2; dh = dw/ar; }
+  try{ g.drawImage(pickSource(clip, dw, dh), (sw-dw)/2, (sh-dh)/2, dw, dh); }catch(e){}
+  if(!isVideo){ m = m || {}; m[key] = c; blurCache.set(clip.el, m); }
+  return c;
+}
+function drawBackground(ctx, W, H, tMs){
+  const b = currentBg();
+  state.bgMode = b.tone;
+  if(b.type === 'gradient'){
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    b.colors.forEach((c,i) => g.addColorStop(i/(b.colors.length-1), c));
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+    return;
+  }
+  ctx.fillStyle = b.colors[0];
+  ctx.fillRect(0,0,W,H);
+  if(b.type !== 'blur' || !state.clips.length) return;
+  // Blur follows the clip on screen and cross-fades into the next one.
+  const n = state.clips.length, dur = state.perDurMs;
+  const slot = Math.floor(tMs / dur), inSlot = tMs - slot*dur;
+  const tr = clamp(state.transMs, 0, dur/2);
+  const cur = blurredShot(state.clips[slot % n], W, H);
+  ctx.save();
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  if(cur) ctx.drawImage(cur, 0, 0, W, H);
+  if(tr > 0 && inSlot > dur - tr){
+    const nxt = blurredShot(state.clips[(slot+1) % n], W, H);
+    if(nxt){ ctx.globalAlpha = (inSlot - (dur - tr)) / tr; ctx.drawImage(nxt, 0, 0, W, H); }
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(0,0,0,.22)';
+  ctx.fillRect(0,0,W,H);
+  ctx.restore();
+}
 function fgColor(){ return state.bgMode==='dark' ? '#ececee' : '#0f0f10'; }
 
 /* ----------------------------- audio (UI sounds) -----------------------------
@@ -991,10 +1096,11 @@ const effects = {
     const [x,y,w,h]=frame;
     const e = easeInOutCubic(t);
     const dy = e*h;
+    drawFrameShadow(ctx, frame);
     ctx.save();
     roundedClip(ctx,x,y,w,h,cornerRadius(w,h));
     if(next){
-      drawClip(ctx,next,frame,1.04-0.04*e,1,0,0);
+      drawClip(ctx,next,frame,1.04-0.04*e,1,0,0,{noShadow:true});
       ctx.fillStyle = `rgba(0,0,0,${0.6*(1-e)})`;
       ctx.fillRect(x,y,w,h);
     } else {
@@ -1008,7 +1114,7 @@ const effects = {
     g.addColorStop(1,`rgba(0,0,0,${0.5*(1-e*0.6)})`);
     ctx.fillStyle = g;
     ctx.fillRect(x, top-sh, w, sh);
-    drawClip(ctx,clip,[x,top,w,h],1,1,0,0);
+    drawClip(ctx,clip,[x,top,w,h],1,1,0,0,{noShadow:true});
     // The panel dims slightly as it drops away.
     ctx.fillStyle = `rgba(0,0,0,${0.3*e})`;
     ctx.fillRect(x, top, w, h);
@@ -1135,6 +1241,25 @@ function roundedClip(ctx,x,y,w,h,r=10){
   ctx.closePath();
   ctx.clip();
 }
+// Drop shadow under a tile (Frame → Shadow / Softness). Uses the current alpha.
+function drawFrameShadow(ctx, frame){
+  if(!(state.shadowPct > 0)) return;
+  const [x,y,w,h] = frame;
+  const k = state.shadowPct/100, soft = state.shadowBlur/100;
+  const m = Math.min(cv.width, cv.height), r = cornerRadius(w,h);
+  ctx.save();
+  ctx.shadowColor = `rgba(0,0,0,${(0.12 + 0.58*k).toFixed(3)})`;
+  ctx.shadowBlur = m * (0.008 + 0.09*soft);
+  ctx.shadowOffsetY = m * (0.004 + 0.03*k) * (0.4 + soft);
+  ctx.fillStyle = state.bgMode==='dark' ? '#0f0f10' : '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);     ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
 function drawClip(ctx, clip, frame, zoom=1, alpha=1, dx=0, dy=0, opts={}){
   if(!clip||!clip.el) return;
   const [x,y,w,h] = frame;
@@ -1142,6 +1267,7 @@ function drawClip(ctx, clip, frame, zoom=1, alpha=1, dx=0, dy=0, opts={}){
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.globalAlpha = clamp(alpha,0,1);
+  if(!opts.noShadow) drawFrameShadow(ctx, frame);
   roundedClip(ctx,x,y,w,h,cornerRadius(w,h));
   // background fill behind transparent images
   ctx.fillStyle = state.bgMode==='dark' ? '#0f0f10' : '#ffffff';
@@ -1243,8 +1369,7 @@ function syncTimeline(tMs){
 function render(tMs){
   syncTimeline(tMs);
   const W=cv.width,H=cv.height;
-  ctx.fillStyle = bgColor();
-  ctx.fillRect(0,0,W,H);
+  drawBackground(ctx, W, H, tMs);
 
   if(state.clips.length===0){
     drawEmptySlots(ctx, W, H);
@@ -1351,6 +1476,30 @@ function togglePlay(){ state.playing ? pause() : play(); }
 function restart(){ state.pausedMs = 0; if(state.playing){ state.t0 = performance.now(); } render(0); $('#seek').value=0; }
 
 /* ----------------------------- UI ----------------------------- */
+function renderBackgrounds(){
+  const wrap = $('#bgSwatches'); if(!wrap) return;
+  const thumb = state.clips[0] && state.clips[0].thumb;
+  wrap.innerHTML = Object.entries(BACKGROUNDS).map(([id,b]) => {
+    const sel = id === state.bgId ? ' sel' : '';
+    if(id === 'custom'){
+      return `<label class="sw custom${sel}" data-v="custom" title="Custom colour"><span class="dot" style="background:${state.bgCustom}"></span><input type="color" value="${state.bgCustom}" aria-label="Custom background colour"></label>`;
+    }
+    if(b.type === 'blur'){
+      return `<button class="sw${sel}" data-v="${id}" title="Blurred shot" style="background:#222"><span class="blurimg" style="${thumb ? `background-image:url('${thumb}')` : ''}"></span><span class="lbl">Blur</span></button>`;
+    }
+    const bg = b.type === 'gradient' ? `linear-gradient(135deg,${b.colors.join(',')})` : b.colors[0];
+    return `<button class="sw${sel}" data-v="${id}" title="${b.name}" style="background:${bg}"></button>`;
+  }).join('');
+  const nm = $('#bgName'); if(nm) nm.textContent = (BACKGROUNDS[state.bgId] || BACKGROUNDS.ink).name;
+}
+// Update selection in place (no re-render) so an open colour picker stays open.
+function selectBg(id){
+  state.bgId = id;
+  $$('#bgSwatches .sw').forEach(el => el.classList.toggle('sel', el.dataset.v === id));
+  const dot = $('#bgSwatches .custom .dot'); if(dot) dot.style.background = state.bgCustom;
+  $('#bgName').textContent = (BACKGROUNDS[id] || BACKGROUNDS.ink).name;
+  render(state.pausedMs);
+}
 function renderEffects(){
   const nm = $('#fxName'); if(nm) nm.textContent = (effects[state.effectId]||effects.none).name;
   const wrap = $('#effects'); wrap.innerHTML='';
@@ -1381,6 +1530,7 @@ function sortClips(mode){
 
 function renderClips(){
   renderTimeline();
+  renderBackgrounds();
   const wrap = $('#clips'); wrap.innerHTML='';
   state.clips.forEach((c,i)=>{
     const row = document.createElement('div');
@@ -1503,7 +1653,9 @@ async function inspireMe(){
   state.paddingPct = _rand([0, 0, 4, 6, 8, 12]);
   state.radiusPct = _rand([0, 1, 2, 2, 4, 6]);
   // Background tone shuffle
-  state.bgMode = _rand(['dark','dark','dark','light']);
+  state.bgId = _rand(['ink','ink','graphite','paper','blur','blur','dusk','ocean','ember','mint','peach']);
+  state.shadowPct = _rand([0, 20, 30, 45, 60]);
+  state.shadowBlur = _rand([30, 50, 70]);
 
   // If only demo clips are loaded, refresh them too.
   const onlyDemos = state.clips.length === 0 || state.clips.every(c => c.isDemo);
@@ -1587,8 +1739,8 @@ const Store = (function(){
   };
 })();
 
-const SETTINGS_KEYS = ['templateId','effectId','aspect','bgMode','quality','fit',
-  'paddingPct','radiusPct','perDurMs','transMs','loop','fps','exFormat','exQuality','gifRes'];
+const SETTINGS_KEYS = ['templateId','effectId','aspect','bgId','bgCustom','quality','fit',
+  'paddingPct','radiusPct','shadowPct','shadowBlur','perDurMs','transMs','loop','fps','exFormat','exQuality','gifRes'];
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1604,7 +1756,10 @@ function syncAllControls(){
   if(state.radiusPct == null) state.radiusPct = 2;
   if(state.exFormat !== 'gif') state.exFormat = 'mp4';
   setToggle('aspect', state.aspect);
-  setToggle('bgmode', state.bgMode);
+  if(!BACKGROUNDS[state.bgId]) state.bgId = state.bgMode === 'light' ? 'paper' : 'ink';
+  if(state.shadowPct == null) state.shadowPct = 0;
+  if(state.shadowBlur == null) state.shadowBlur = 50;
+  renderBackgrounds();
   setToggle('fit', state.fit);
   setToggle('quality', state.quality);
   setToggle('exFmt', state.exFormat);
@@ -1922,9 +2077,10 @@ const GifEncoder = (function(){
       } else {
         emit(prefix);
         if(next < 4096){
-          dict.set(key, next);
-          next++;
-          if(next === (1<<codeSize) && codeSize<12) codeSize++;
+          // Widen codes just before adding the entry that needs the extra bit —
+          // the point at which a GIF decoder widens its own reads.
+          if(next >= (1<<codeSize)) codeSize++;
+          dict.set(key, next++);
         } else {
           emit(clear);
           reset();
@@ -2008,6 +2164,8 @@ const SLIDERS = [
    fmt: v => v >= 1000 ? (v/1000).toFixed(2) : String(v), unit: v => v >= 1000 ? 's' : 'ms'},
   {id:'padding', key:'paddingPct', fmt: v => String(v),           unit:'%'},
   {id:'radius',  key:'radiusPct',  fmt: v => String(v),           unit:'%'},
+  {id:'shadow',  key:'shadowPct',  fmt: v => String(v),           unit:'%'},
+  {id:'shadowBlur', key:'shadowBlur', fmt: v => String(v),        unit:'%'},
 ];
 function curveVal(c, pos){
   const v = c.min + (c.max - c.min) * Math.pow(pos/1000, 2);
@@ -2137,12 +2295,14 @@ function wire(){
     applyAspect();
     render(state.pausedMs);
   });
-  $('#bgmode').addEventListener('click', e=>{
-    const b = e.target.closest('button'); if(!b) return;
-    $$('#bgmode button').forEach(x=>x.classList.remove('sel'));
-    b.classList.add('sel');
-    state.bgMode = b.dataset.v;
-    render(state.pausedMs);
+  $('#bgSwatches').addEventListener('click', e=>{
+    const b = e.target.closest('.sw'); if(!b) return;
+    selectBg(b.dataset.v);
+  });
+  $('#bgSwatches').addEventListener('input', e=>{
+    if(e.target.type !== 'color') return;
+    state.bgCustom = e.target.value;
+    selectBg('custom');
   });
   $('#fit').addEventListener('click', e=>{
     const b = e.target.closest('button'); if(!b) return;
