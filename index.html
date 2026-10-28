@@ -411,7 +411,7 @@
       </div>
       <div class="prop">
         <label>Aspect</label>
-        <div class="toggle" id="aspect"><button data-v="16:9" class="sel">16:9</button><button data-v="1:1">1:1</button><button data-v="9:16">9:16</button></div>
+        <div class="toggle" id="aspect"><button data-v="16:9" class="sel">16:9</button><button data-v="1:1">1:1</button><button data-v="4:5" title="Portrait post — X / Instagram, 1080×1350">4:5</button><button data-v="9:16">9:16</button></div>
       </div>
       <div class="prop">
         <label>Image fit</label>
@@ -704,10 +704,10 @@ const ctx = cv.getContext('2d');
 function applyAspect(){
   // Resolution presets — buffer matches export resolution.
   const sizes = {
-    hd:  {'16:9':[1280,720],  '1:1':[1080,1080],'9:16':[720,1280] },
-    fhd: {'16:9':[1920,1080], '1:1':[1440,1440],'9:16':[1080,1920]},
-    qhd: {'16:9':[2560,1440], '1:1':[1920,1920],'9:16':[1440,2560]},
-    uhd: {'16:9':[3840,2160], '1:1':[2880,2880],'9:16':[2160,3840]},
+    hd:  {'16:9':[1280,720],  '1:1':[1080,1080],'4:5':[720,900],   '9:16':[720,1280] },
+    fhd: {'16:9':[1920,1080], '1:1':[1440,1440],'4:5':[1080,1350], '9:16':[1080,1920]},
+    qhd: {'16:9':[2560,1440], '1:1':[1920,1920],'4:5':[1440,1800], '9:16':[1440,2560]},
+    uhd: {'16:9':[3840,2160], '1:1':[2880,2880],'4:5':[2160,2700], '9:16':[2160,3840]},
   };
   const [w,h] = sizes[state.quality][state.aspect];
   cv.width = w; cv.height = h;
@@ -2294,6 +2294,7 @@ function wire(){
     state.aspect = b.dataset.v;
     applyAspect();
     render(state.pausedMs);
+    updateExportUI();
   });
   $('#bgSwatches').addEventListener('click', e=>{
     const b = e.target.closest('.sw'); if(!b) return;
