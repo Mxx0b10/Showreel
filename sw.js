@@ -1,11 +1,12 @@
 // Showreel Studio service worker — network-first with cache fallback.
 // Paths are computed relative to the SW's own location so the app works
 // whether deployed at apex (/) or subpath (/repo-name/).
-const CACHE = 'showreel-v1';
+const CACHE = 'showreel-v2';
 const BASE = new URL('./', self.location).pathname;
 const ASSETS = [
   BASE,
   BASE + 'index.html',
+  BASE + 'story.html',
   BASE + 'manifest.json',
   BASE + 'icon.svg',
   BASE + 'icon-192.png',
